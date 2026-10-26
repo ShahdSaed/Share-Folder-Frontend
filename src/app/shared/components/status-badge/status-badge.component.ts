@@ -1,0 +1,85 @@
+import { Component, Input } from '@angular/core';
+import { CommonModule } from '@angular/common';
+
+export type BadgeVariant = 'success' | 'error' | 'warning' | 'info' | 'neutral';
+export type BadgeSize = 'sm' | 'md';
+
+@Component({
+  selector: 'app-status-badge',
+  standalone: true,
+  imports: [CommonModule],
+  template: `
+    <span [class]="'badge badge-' + variant + ' badge-' + size">
+      @if (showDot) {
+        <span class="badge-dot" aria-hidden="true"></span>
+      }
+      <ng-content></ng-content>
+    </span>
+  `,
+  styles: [
+    `
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-weight: 500;
+        border-radius: var(--cfh-radius-full);
+        white-space: nowrap;
+        line-height: 1;
+        letter-spacing: 0.01em;
+      }
+
+      .badge-sm {
+        padding: 3px 8px;
+        font-size: 11px;
+      }
+
+      .badge-md {
+        padding: 4px 10px;
+        font-size: 12px;
+      }
+
+      .badge-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background-color: currentColor;
+      }
+
+      .badge-success {
+        background-color: var(--cfh-success-light);
+        color: var(--cfh-success);
+        border: 1px solid var(--cfh-success-border);
+      }
+
+      .badge-error {
+        background-color: var(--cfh-error-light);
+        color: var(--cfh-error);
+        border: 1px solid var(--cfh-error-border);
+      }
+
+      .badge-warning {
+        background-color: var(--cfh-warning-light);
+        color: var(--cfh-warning);
+        border: 1px solid var(--cfh-warning-border);
+      }
+
+      .badge-info {
+        background-color: var(--cfh-primary-blue-light);
+        color: var(--cfh-primary-blue);
+        border: 1px solid var(--cfh-primary-blue-subtle);
+      }
+
+      .badge-neutral {
+        background-color: #f3f4f6;
+        color: var(--cfh-text-secondary);
+        border: 1px solid var(--cfh-border);
+      }
+    `,
+  ],
+})
+export class StatusBadgeComponent {
+  @Input() variant: BadgeVariant = 'neutral';
+  @Input() size: BadgeSize = 'sm';
+  @Input() showDot = true;
+}
