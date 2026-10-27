@@ -1,0 +1,41 @@
+.empty-state-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 48px 24px;
+  background-color: var(--cfh-surface);
+  border-radius: var(--cfh-radius-lg);
+}
+
+.empty-icon-wrapper {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background-color: #f3f4f6;
+  color: var(--cfh-text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 16px;
+}
+
+.empty-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--cfh-primary-navy);
+  margin-bottom: 6px;
+}
+
+.empty-description {
+  font-size: var(--cfh-font-size-secondary);
+  color: var(--cfh-text-secondary);
+  max-width: 360px;
+  line-height: 1.5;
+  margin-bottom: 16px;
+}
+
+.empty-action {
+  margin-top: 8px;
+}

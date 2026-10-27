@@ -1,0 +1,38 @@
+<header class="cfh-topbar">
+  <div class="topbar-left">
+    <button
+      type="button"
+      class="mobile-menu-trigger"
+      (click)="toggleSidebar.emit()"
+      aria-label="Toggle navigation menu"
+    >
+      <app-icon name="menu" [size]="20"></app-icon>
+    </button>
+
+    <div class="topbar-context">
+      <span class="system-title">Enterprise File Hub</span>
+    </div>
+  </div>
+
+  <div class="topbar-right">
+    <!-- Current User indicator -->
+    @if (authService.currentUser(); as user) {
+      <div class="current-user-card">
+        <div class="user-avatar-circle">
+          {{ user.fullName.charAt(0).toUpperCase() }}
+        </div>
+        <div class="user-details-col">
+          <span class="user-greeting">{{ user.fullName }}</span>
+          <span class="user-email-sub">{{ user.email }}</span>
+        </div>
+        <app-status-badge
+          [variant]="user.role === 'ADMIN' ? 'info' : 'neutral'"
+          size="sm"
+          [showDot]="false"
+        >
+          {{ user.role }}
+        </app-status-badge>
+      </div>
+    }
+  </div>
+</header>

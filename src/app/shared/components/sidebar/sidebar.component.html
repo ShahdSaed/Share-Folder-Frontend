@@ -1,0 +1,107 @@
+<aside [class]="'cfh-sidebar' + (isOpen ? ' is-open' : '')">
+  <!-- Brand Logo / Product Name Header -->
+  <div class="sidebar-brand">
+    <div class="brand-logo-icon">
+      <app-icon name="shield" [size]="20" color="#FFFFFF"></app-icon>
+    </div>
+    <div class="brand-text">
+      <span class="product-name">Company File Hub</span>
+      <span class="brand-tag">Enterprise Portal</span>
+    </div>
+  </div>
+
+  <!-- Navigation Links -->
+  <nav class="sidebar-nav">
+    <div class="nav-section-title">Navigation</div>
+    <ul class="nav-list">
+      <li class="nav-item">
+        <a
+          routerLink="/dashboard"
+          routerLinkActive="active"
+          class="nav-link"
+          (click)="onLinkClick()"
+        >
+          <app-icon name="layout-dashboard" [size]="18"></app-icon>
+          <span>Dashboard</span>
+        </a>
+      </li>
+      <li class="nav-item">
+        <a
+          routerLink="/shared-files"
+          routerLinkActive="active"
+          class="nav-link"
+          (click)="onLinkClick()"
+        >
+          <app-icon name="folder" [size]="18"></app-icon>
+          <span>Shared Files</span>
+        </a>
+      </li>
+    </ul>
+
+    <!-- Admin-Only Navigation -->
+    @if (authService.isAdmin()) {
+      <div class="nav-section-title admin-title">Administration</div>
+      <ul class="nav-list">
+        <li class="nav-item">
+          <a
+            routerLink="/admin/manage-files"
+            routerLinkActive="active"
+            class="nav-link"
+            (click)="onLinkClick()"
+          >
+            <app-icon name="file-text" [size]="18"></app-icon>
+            <span>Manage Files</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a
+            routerLink="/admin/manage-users"
+            routerLinkActive="active"
+            class="nav-link"
+            (click)="onLinkClick()"
+          >
+            <app-icon name="users" [size]="18"></app-icon>
+            <span>Manage Users</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a
+            routerLink="/admin/activity-logs"
+            routerLinkActive="active"
+            class="nav-link"
+            (click)="onLinkClick()"
+          >
+            <app-icon name="activity" [size]="18"></app-icon>
+            <span>Activity Logs</span>
+          </a>
+        </li>
+      </ul>
+    }
+  </nav>
+
+  <!-- Sidebar Bottom: User Profile & Logout -->
+  <div class="sidebar-footer">
+    @if (authService.currentUser(); as user) {
+      <div class="user-profile-badge">
+        <div class="user-avatar">{{ user.avatarInitials || 'U' }}</div>
+        <div class="user-info">
+          <span class="user-name">{{ user.fullName }}</span>
+          <span class="user-role">{{ user.role === 'ADMIN' ? 'Administrator' : 'Viewer' }}</span>
+        </div>
+        <button
+          type="button"
+          class="logout-btn"
+          (click)="authService.logout()"
+          title="Sign Out"
+          aria-label="Sign Out"
+        >
+          <app-icon name="log-out" [size]="16"></app-icon>
+        </button>
+      </div>
+    }
+  </div>
+</aside>
+
+@if (isOpen) {
+  <div class="sidebar-backdrop" (click)="closeSidebar()"></div>
+}

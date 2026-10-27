@@ -1,0 +1,6 @@
+<span [class]="'badge badge-' + variant + ' badge-' + size">
+  @if (showDot) {
+    <span class="badge-dot" aria-hidden="true"></span>
+  }
+  <ng-content></ng-content>
+</span>

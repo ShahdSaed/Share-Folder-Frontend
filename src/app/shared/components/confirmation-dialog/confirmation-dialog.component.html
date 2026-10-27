@@ -1,0 +1,33 @@
+<app-modal
+  [isOpen]="isOpen"
+  [title]="title"
+  size="sm"
+  (closed)="onCancel()"
+>
+  <div class="confirm-content">
+    @if (isDanger) {
+      <div class="confirm-icon danger">
+        <app-icon name="alert-triangle" [size]="24"></app-icon>
+      </div>
+    }
+    <div class="confirm-text">
+      <p class="confirm-message">{{ message }}</p>
+      @if (submessage) {
+        <p class="confirm-submessage">{{ submessage }}</p>
+      }
+    </div>
+  </div>
+
+  <div modal-footer class="confirm-actions">
+    <app-button variant="secondary" (btnClick)="onCancel()" [disabled]="loading">
+      {{ cancelText }}
+    </app-button>
+    <app-button
+      [variant]="isDanger ? 'danger' : 'primary'"
+      [loading]="loading"
+      (btnClick)="onConfirm()"
+    >
+      {{ confirmText }}
+    </app-button>
+  </div>
+</app-modal>
