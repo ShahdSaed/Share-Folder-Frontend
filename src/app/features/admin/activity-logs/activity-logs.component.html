@@ -1,0 +1,108 @@
+<div class="activity-logs-page">
+  <!-- Header -->
+  <div class="page-header-row">
+    <div>
+      <h1 class="page-title">Activity Logs</h1>
+      <p class="text-secondary">Monitor user actions, file access attempts, and security events.</p>
+    </div>
+  </div>
+
+  <!-- Filters Toolbar -->
+  <div class="cfh-surface toolbar">
+    <div class="toolbar-filters">
+      <div class="search-input-wrap">
+        <app-icon name="search" [size]="16" class="search-icon"></app-icon>
+        <input
+          type="search"
+          class="form-control search-input"
+          placeholder="Search by user or file..."
+          [(ngModel)]="searchQuery"
+          (ngModelChange)="currentPage = 1"
+        />
+      </div>
+
+      <select class="form-control filter-select" [(ngModel)]="actionFilter" (ngModelChange)="currentPage = 1">
+        <option value="">All Actions</option>
+        @for (action of actionTypes; track action) {
+          <option [value]="action">{{ action }}</option>
+        }
+      </select>
+
+      <select class="form-control filter-select" [(ngModel)]="resultFilter" (ngModelChange)="currentPage = 1">
+        <option value="">All Results</option>
+        <option value="SUCCESS">Success</option>
+        <option value="FAILED">Failed</option>
+      </select>
+
+      @if (hasActiveFilters()) {
+        <app-button variant="ghost" size="sm" (btnClick)="clearFilters()">
+          <app-icon name="x" [size]="14"></app-icon>
+          Clear Filters
+        </app-button>
+      }
+    </div>
+
+    <span class="log-count">{{ filteredLogs().length }} records</span>
+  </div>
+
+  <!-- Logs Table -->
+  @if (pagedLogs().length > 0) {
+    <div class="cfh-table-container">
+      <table class="cfh-table">
+        <thead>
+          <tr>
+            <th>Timestamp</th>
+            <th>User</th>
+            <th>Action</th>
+            <th>Target File</th>
+            <th>IP Address</th>
+            <th>Result</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (log of pagedLogs(); track log.id) {
+            <tr [class.row-failed]="log.result === 'FAILED'">
+              <td class="timestamp-cell">
+                <span class="ts-date">{{ log.timestamp | date:'MMM d, yyyy' }}</span>
+                <span class="ts-time">{{ log.timestamp | date:'HH:mm:ss' }}</span>
+              </td>
+              <td class="user-cell">
+                <span class="user-name">{{ log.userName }}</span>
+                <span class="user-email">{{ log.userEmail }}</span>
+              </td>
+              <td>
+                <span [class]="'action-badge action-' + getActionCategory(log.action)">
+                  {{ log.action }}
+                </span>
+              </td>
+              <td class="target-cell">{{ log.targetFile || '—' }}</td>
+              <td class="ip-cell"><code>{{ log.ipAddress }}</code></td>
+              <td>
+                <app-status-badge
+                  [variant]="log.result === 'SUCCESS' ? 'success' : 'error'"
+                  size="sm"
+                >
+                  {{ log.result }}
+                </app-status-badge>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+      <app-pagination
+        [currentPage]="currentPage"
+        [totalItems]="filteredLogs().length"
+        [pageSize]="pageSize"
+        (pageChange)="currentPage = $event"
+      ></app-pagination>
+    </div>
+  } @else {
+    <app-empty-state
+      icon="activity"
+      title="No logs found"
+      [description]="hasActiveFilters() ? 'No records match your current filter criteria.' : 'Activity logs will appear here as users interact with the system.'"
+      [actionLabel]="hasActiveFilters() ? 'Clear Filters' : undefined"
+      (actionClicked)="clearFilters()"
+    ></app-empty-state>
+  }
+</div>

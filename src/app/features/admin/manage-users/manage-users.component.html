@@ -1,0 +1,171 @@
+<div class="manage-users-page">
+  <!-- Header -->
+  <div class="page-header-row">
+    <div>
+      <h1 class="page-title">Manage Users</h1>
+      <p class="text-secondary">Add, edit, and manage user accounts and roles.</p>
+    </div>
+    <app-button variant="primary" (btnClick)="openAddModal()">
+      <app-icon name="plus" [size]="16"></app-icon>
+      Add User
+    </app-button>
+  </div>
+
+  <!-- Toolbar -->
+  <div class="cfh-surface toolbar">
+    <div class="toolbar-left">
+      <div class="search-input-wrap">
+        <app-icon name="search" [size]="16" class="search-icon"></app-icon>
+        <input
+          type="search"
+          class="form-control search-input"
+          placeholder="Search by name or email..."
+          [(ngModel)]="searchQuery"
+          (ngModelChange)="currentPage = 1"
+        />
+      </div>
+      <select class="form-control filter-select" [(ngModel)]="roleFilter" (ngModelChange)="currentPage = 1">
+        <option value="">All Roles</option>
+        <option value="ADMIN">Admin</option>
+        <option value="VIEWER">Viewer</option>
+      </select>
+      <select class="form-control filter-select" [(ngModel)]="statusFilter" (ngModelChange)="currentPage = 1">
+        <option value="">All Statuses</option>
+        <option value="ACTIVE">Active</option>
+        <option value="INACTIVE">Inactive</option>
+      </select>
+    </div>
+    <span class="user-count">{{ filteredUsers().length }} users</span>
+  </div>
+
+  <!-- Table -->
+  @if (pagedUsers().length > 0) {
+    <div class="cfh-table-container">
+      <table class="cfh-table">
+        <thead>
+          <tr>
+            <th>Full Name</th>
+            <th>Email</th>
+            <th>Role</th>
+            <th>Status</th>
+            <th>Created</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (user of pagedUsers(); track user.id) {
+            <tr>
+              <td class="name-cell">
+                <div class="user-avatar">{{ user.avatarInitials || 'U' }}</div>
+                <span class="user-full-name">{{ user.fullName }}</span>
+              </td>
+              <td class="email-cell">{{ user.email }}</td>
+              <td>
+                <app-status-badge
+                  [variant]="user.role === 'ADMIN' ? 'info' : 'neutral'"
+                  size="sm"
+                  [showDot]="false"
+                >
+                  {{ user.role }}
+                </app-status-badge>
+              </td>
+              <td>
+                <app-status-badge
+                  [variant]="user.status === 'ACTIVE' ? 'success' : 'error'"
+                  size="sm"
+                >
+                  {{ user.status === 'ACTIVE' ? 'Active' : 'Inactive' }}
+                </app-status-badge>
+              </td>
+              <td class="secondary-cell">{{ user.createdAt | timeAgo }}</td>
+              <td class="actions-cell">
+                <div class="action-btn-group">
+                  <button type="button" class="action-icon-btn" (click)="openEditModal(user)" title="Edit user">
+                    <app-icon name="edit" [size]="14"></app-icon>
+                  </button>
+                  <button
+                    type="button"
+                    [class]="'action-icon-btn toggle-btn ' + (user.status === 'ACTIVE' ? 'warning' : 'success')"
+                    (click)="confirmToggleStatus(user)"
+                    [title]="user.status === 'ACTIVE' ? 'Deactivate' : 'Activate'"
+                  >
+                    <app-icon [name]="user.status === 'ACTIVE' ? 'x-circle' : 'check-circle'" [size]="14"></app-icon>
+                  </button>
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+      <app-pagination
+        [currentPage]="currentPage"
+        [totalItems]="filteredUsers().length"
+        [pageSize]="pageSize"
+        (pageChange)="currentPage = $event"
+      ></app-pagination>
+    </div>
+  } @else {
+    <app-empty-state icon="users" title="No users found" description="No users match your filter."></app-empty-state>
+  }
+</div>
+
+<!-- Add/Edit User Modal -->
+<app-modal
+  [isOpen]="showUserModal()"
+  [title]="editingUser() ? 'Edit User' : 'Add New User'"
+  size="sm"
+  (closed)="closeUserModal()"
+>
+  <form [formGroup]="userForm" novalidate>
+    <div class="form-group">
+      <label for="user-fullname">Full Name <span class="required-indicator">*</span></label>
+      <input id="user-fullname" type="text" formControlName="fullName" class="form-control" placeholder="Enter full name" />
+      @if (userForm.get('fullName')!.invalid && userForm.get('fullName')!.touched) {
+        <span class="input-error"><app-icon name="alert-circle" [size]="12"></app-icon> Full name is required.</span>
+      }
+    </div>
+
+    <div class="form-group">
+      <label for="user-email">Email Address <span class="required-indicator">*</span></label>
+      <input id="user-email" type="email" formControlName="email" class="form-control" placeholder="name@company.com" [readonly]="!!editingUser()" />
+      @if (userForm.get('email')!.invalid && userForm.get('email')!.touched) {
+        <span class="input-error"><app-icon name="alert-circle" [size]="12"></app-icon> Valid email required.</span>
+      }
+    </div>
+
+    <div class="form-group">
+      <label for="user-role">Role <span class="required-indicator">*</span></label>
+      <select id="user-role" formControlName="role" class="form-control">
+        <option value="VIEWER">Viewer</option>
+        <option value="ADMIN">Admin</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label for="user-status">Account Status</label>
+      <select id="user-status" formControlName="status" class="form-control">
+        <option value="ACTIVE">Active</option>
+        <option value="INACTIVE">Inactive</option>
+      </select>
+    </div>
+  </form>
+
+  <div modal-footer>
+    <app-button variant="secondary" (btnClick)="closeUserModal()">Cancel</app-button>
+    <app-button variant="primary" [disabled]="userForm.invalid" (btnClick)="onSaveUser()">
+      {{ editingUser() ? 'Save Changes' : 'Add User' }}
+    </app-button>
+  </div>
+</app-modal>
+
+<!-- Toggle Status Confirmation -->
+<app-confirmation-dialog
+  [isOpen]="showStatusDialog()"
+  [title]="toggleTarget()?.status === 'ACTIVE' ? 'Deactivate Account' : 'Activate Account'"
+  [message]="statusDialogMessage()"
+  submessage="This will update the user's access credentials and permissions across all systems."
+  [isDanger]="toggleTarget()?.status === 'ACTIVE'"
+  [confirmText]="toggleTarget()?.status === 'ACTIVE' ? 'Deactivate' : 'Activate'"
+  (confirmed)="onToggleConfirmed()"
+  (cancelled)="showStatusDialog.set(false)"
+></app-confirmation-dialog>
