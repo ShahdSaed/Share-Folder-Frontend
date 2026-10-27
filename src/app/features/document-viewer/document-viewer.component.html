@@ -1,0 +1,129 @@
+@if (file()) {
+  <div class="viewer-page">
+    <!-- Back Navigation + Header -->
+    <div class="viewer-topbar">
+      <a routerLink="/shared-files" class="back-link">
+        <app-icon name="chevron-left" [size]="16"></app-icon>
+        Back to Shared Files
+      </a>
+      <div class="viewer-file-header">
+        <app-file-icon [type]="file()!.type" size="md"></app-file-icon>
+        <div>
+          <h1 class="viewer-filename">{{ file()!.name }}</h1>
+          <div class="viewer-meta">
+            <span>{{ file()!.type }}</span>
+            <span class="dot">·</span>
+            <span>{{ file()!.pageCount || 1 }} page{{ (file()!.pageCount || 1) > 1 ? 's' : '' }}</span>
+            <span class="dot">·</span>
+            <span>Uploaded by {{ file()!.uploadedBy }}</span>
+          </div>
+        </div>
+      </div>
+      <app-status-badge variant="success" size="sm">
+        <app-icon name="shield-check" [size]="12"></app-icon>
+        Verified Access
+      </app-status-badge>
+    </div>
+
+    <!-- Document Viewer Area -->
+    <div class="viewer-layout">
+      <!-- Main Content Panel -->
+      <div class="viewer-main">
+        <!-- Viewer Toolbar -->
+        <div class="viewer-controls">
+          <div class="controls-left">
+            <button type="button" class="ctrl-btn" (click)="prevPage()" [disabled]="currentPage() === 1" aria-label="Previous page">
+              <app-icon name="chevron-left" [size]="16"></app-icon>
+            </button>
+            <span class="page-indicator">Page {{ currentPage() }} of {{ file()!.pageCount || 1 }}</span>
+            <button type="button" class="ctrl-btn" (click)="nextPage()" [disabled]="currentPage() >= (file()!.pageCount || 1)" aria-label="Next page">
+              <app-icon name="chevron-right" [size]="16"></app-icon>
+            </button>
+          </div>
+          <div class="controls-right">
+            <button type="button" class="ctrl-btn" (click)="zoomOut()" aria-label="Zoom out">
+              <app-icon name="zoom-out" [size]="16"></app-icon>
+            </button>
+            <span class="zoom-label">{{ zoomLevel() }}%</span>
+            <button type="button" class="ctrl-btn" (click)="zoomIn()" aria-label="Zoom in">
+              <app-icon name="zoom-in" [size]="16"></app-icon>
+            </button>
+          </div>
+        </div>
+
+        <!-- Document Render Area -->
+        <div class="document-render-area" [style.fontSize.px]="baseFontSize()">
+          <div class="document-page">
+            <div class="document-watermark">CONFIDENTIAL</div>
+            <div class="document-content">
+              @if (currentContent(); as content) {
+                @for (paragraph of content; track $index) {
+                  <p
+                    [class]="$index === 0 ? 'doc-heading' : ($index === 1 ? 'doc-subheading' : 'doc-paragraph')"
+                  >
+                    {{ paragraph }}
+                  </p>
+                }
+              } @else {
+                <p class="doc-heading">{{ file()!.name }}</p>
+                <p class="doc-paragraph">Document preview is being prepared. Real-time rendering streams the content securely from the backend service.</p>
+              }
+            </div>
+            <div class="document-footer">
+              {{ file()!.name }} &mdash; Page {{ currentPage() }} of {{ file()!.pageCount || 1 }} &mdash; CONFIDENTIAL
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sidebar Panel -->
+      <div class="viewer-sidebar-panel">
+        <div class="info-section">
+          <h3 class="info-section-title">Document Details</h3>
+          <dl class="info-list">
+            <div class="info-row">
+              <dt>File Name</dt>
+              <dd>{{ file()!.name }}</dd>
+            </div>
+            <div class="info-row">
+              <dt>Type</dt>
+              <dd>{{ file()!.type }}</dd>
+            </div>
+            <div class="info-row">
+              <dt>Uploaded By</dt>
+              <dd>{{ file()!.uploadedBy }}</dd>
+            </div>
+            <div class="info-row">
+              <dt>Last Updated</dt>
+              <dd>{{ file()!.updatedAt | date:'mediumDate' }}</dd>
+            </div>
+            @if (file()!.description) {
+              <div class="info-row">
+                <dt>Description</dt>
+                <dd class="desc-text">{{ file()!.description }}</dd>
+              </div>
+            }
+          </dl>
+        </div>
+
+        <div class="protection-notice">
+          <div class="protection-icon">
+            <app-icon name="shield" [size]="16"></app-icon>
+          </div>
+          <p class="protection-text">
+            Protected Document. Access, printing, and downloads are audited and logged according to corporate security policy.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+} @else {
+  <div class="not-found-state">
+    <app-icon name="alert-circle" [size]="40"></app-icon>
+    <h2>Document not found or access denied.</h2>
+    <p>This file may have been removed or you lack the necessary access.</p>
+    <a routerLink="/shared-files" class="back-link">
+      Return to Shared Files
+    </a>
+  </div>
+}

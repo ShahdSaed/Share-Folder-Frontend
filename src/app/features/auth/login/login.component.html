@@ -1,0 +1,110 @@
+<div class="login-page">
+  <div class="login-container">
+
+    <!-- Header -->
+    <div class="login-header">
+      <div class="brand-mark">
+        <app-icon name="shield" [size]="22" color="#ffffff"></app-icon>
+      </div>
+      <p class="product-name">Company File Hub</p>
+      <h1 class="welcome-heading">Welcome Back</h1>
+      <p class="welcome-subtitle">Sign in to access your company's secure documents.</p>
+    </div>
+
+    <!-- Login Form -->
+    <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" novalidate>
+
+      <!-- Email Field -->
+      <div class="form-group">
+        <label for="email">
+          Email Address
+          <span class="required-indicator" aria-hidden="true">*</span>
+        </label>
+        <input
+          id="email"
+          type="email"
+          formControlName="email"
+          [class]="'form-control' + (emailInvalid ? ' is-invalid' : '')"
+          placeholder="name@company.com"
+          autocomplete="email"
+          aria-required="true"
+          [attr.aria-describedby]="emailInvalid ? 'email-error' : null"
+        />
+        @if (emailInvalid) {
+          <span id="email-error" class="input-error" role="alert">
+            <app-icon name="alert-circle" [size]="12"></app-icon>
+            {{ emailErrorMessage }}
+          </span>
+        }
+      </div>
+
+      <!-- Password Field -->
+      <div class="form-group">
+        <label for="password">
+          Password
+          <span class="required-indicator" aria-hidden="true">*</span>
+        </label>
+        <div class="input-with-addon">
+          <input
+            id="password"
+            [type]="showPassword ? 'text' : 'password'"
+            formControlName="password"
+            [class]="'form-control' + (passwordInvalid ? ' is-invalid' : '')"
+            placeholder="Enter your password"
+            autocomplete="current-password"
+            aria-required="true"
+            [attr.aria-describedby]="passwordInvalid ? 'password-error' : null"
+          />
+          <button
+            type="button"
+            class="input-addon-btn"
+            (click)="showPassword = !showPassword"
+            [attr.aria-label]="showPassword ? 'Hide password' : 'Show password'"
+          >
+            <app-icon [name]="showPassword ? 'eye-off' : 'eye'" [size]="16"></app-icon>
+          </button>
+        </div>
+        @if (passwordInvalid) {
+          <span id="password-error" class="input-error" role="alert">
+            <app-icon name="alert-circle" [size]="12"></app-icon>
+            {{ passwordErrorMessage }}
+          </span>
+        }
+      </div>
+
+      <!-- Remember Me -->
+      <div class="remember-row">
+        <label class="checkbox-label">
+          <input type="checkbox" formControlName="rememberMe" class="checkbox-input" />
+          <span class="checkbox-text">Remember me</span>
+        </label>
+      </div>
+
+      <!-- Error State -->
+      @if (loginError) {
+        <div class="login-error-msg" role="alert">
+          <app-icon name="alert-circle" [size]="16"></app-icon>
+          {{ loginError }}
+        </div>
+      }
+
+      <!-- Submit -->
+      <app-button
+        type="submit"
+        variant="primary"
+        size="lg"
+        [fullWidth]="true"
+        [loading]="isLoading"
+        [disabled]="loginForm.invalid || isLoading"
+      >
+        Sign In
+      </app-button>
+    </form>
+
+    <!-- Security Note -->
+    <div class="security-note">
+      <app-icon name="lock" [size]="13"></app-icon>
+      <span>Secure access to your company's files.</span>
+    </div>
+  </div>
+</div>
