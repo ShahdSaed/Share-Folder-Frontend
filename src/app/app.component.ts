@@ -6,10 +6,7 @@ import { ToastComponent } from './shared/components/toast/toast.component';
   selector: 'app-root',
   standalone: true,
   imports: [RouterOutlet, ToastComponent],
-  template: `
-    <router-outlet></router-outlet>
-    <app-toast></app-toast>
-  `,
-  styles: [],
+  templateUrl: './app.component.html',
+  styleUrl: './app.component.scss',
 })
 export class App {}

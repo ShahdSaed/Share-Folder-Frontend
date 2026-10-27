@@ -1,0 +1,16 @@
+<div class="app-layout">
+  <!-- Left Sidebar -->
+  <app-sidebar
+    [isOpen]="sidebarOpen"
+    (close)="sidebarOpen = false"
+  ></app-sidebar>
+
+  <!-- Main Shell Content Area -->
+  <div class="app-main-wrapper">
+    <app-topbar (toggleSidebar)="sidebarOpen = !sidebarOpen"></app-topbar>
+
+    <main class="app-content-body">
+      <router-outlet></router-outlet>
+    </main>
+  </div>
+</div>
