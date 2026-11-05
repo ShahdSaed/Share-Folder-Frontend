@@ -1,12 +1,9 @@
 <aside [class]="'cfh-sidebar' + (isOpen ? ' is-open' : '')">
-  <!-- Brand Logo / Product Name Header -->
+  <!-- Brand Logo Header -->
   <div class="sidebar-brand">
-    <div class="brand-logo-icon">
-      <app-icon name="shield" [size]="20" color="#FFFFFF"></app-icon>
-    </div>
-    <div class="brand-text">
-      <span class="product-name">Company File Hub</span>
-      <span class="brand-tag">Enterprise Portal</span>
+    <div class="brand-wrapper">
+      <img src="logo.png" alt="Sotaico" class="sidebar-brand-logo" />
+      <span class="sidebar-brand-title">Shared Folder</span>
     </div>
   </div>
 
@@ -14,17 +11,19 @@
   <nav class="sidebar-nav">
     <div class="nav-section-title">Navigation</div>
     <ul class="nav-list">
-      <li class="nav-item">
-        <a
-          routerLink="/dashboard"
-          routerLinkActive="active"
-          class="nav-link"
-          (click)="onLinkClick()"
-        >
-          <app-icon name="layout-dashboard" [size]="18"></app-icon>
-          <span>Dashboard</span>
-        </a>
-      </li>
+      @if (authService.isAdmin()) {
+        <li class="nav-item">
+          <a
+            routerLink="/dashboard"
+            routerLinkActive="active"
+            class="nav-link"
+            (click)="onLinkClick()"
+          >
+            <app-icon name="layout-dashboard" [size]="18"></app-icon>
+            <span>Dashboard</span>
+          </a>
+        </li>
+      }
       <li class="nav-item">
         <a
           routerLink="/shared-files"

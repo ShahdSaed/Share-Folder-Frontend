@@ -1,6 +1,6 @@
 .cfh-sidebar {
   width: var(--cfh-sidebar-width);
-  background-color: var(--cfh-primary-navy);
+  background: linear-gradient(180deg, #0d2744 0%, #0a1f38 100%);
   color: #f3f4f6;
   height: 100vh;
   position: fixed;
@@ -9,7 +9,7 @@
   z-index: 50;
   display: flex;
   flex-direction: column;
-  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  border-right: 1px solid rgba(255, 255, 255, 0.07);
   transition: transform 0.25s ease-in-out;
 }
 
@@ -17,39 +17,39 @@
   height: var(--cfh-topbar-height);
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 0 20px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-}
+  padding: 0 14px;
+  border-bottom: none;
+  box-sizing: border-box;
 
-.brand-logo-icon {
-  width: 32px;
-  height: 32px;
-  border-radius: var(--cfh-radius-md);
-  background-color: var(--cfh-primary-blue);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
+  .brand-wrapper {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
 
-.brand-text {
-  display: flex;
-  flex-direction: column;
-}
+  .sidebar-brand-logo {
+    width: 100%;
+    height: auto;
+    max-height: 44px;
+    object-fit: contain;
+    object-position: left center;
+    display: block;
+  }
 
-.product-name {
-  font-size: 14px;
-  font-weight: 700;
-  color: #ffffff;
-  letter-spacing: -0.01em;
-  line-height: 1.2;
-}
-
-.brand-tag {
-  font-size: 11px;
-  color: #94a3b8;
-  line-height: 1.2;
+  .sidebar-brand-title {
+    font-size: 8px;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.55);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-top: -8px;
+    margin-left: 0;
+    text-align: right;
+    white-space: nowrap;
+    position: relative;
+    z-index: 2;
+  }
 }
 
 .sidebar-nav {
@@ -98,17 +98,17 @@
   }
 
   &.active {
-    background-color: #253858;
-    color: #ffffff;
+    background-color: rgba(46, 125, 50, 0.25);
+    color: #81c784;
     font-weight: 600;
-    box-shadow: inset 3px 0 0 var(--cfh-primary-blue);
+    box-shadow: inset 3px 0 0 #4caf50;
   }
 }
 
 .sidebar-footer {
   padding: 16px;
   border-top: 1px solid rgba(255, 255, 255, 0.08);
-  background-color: #0f1d32;
+  background-color: #071829;
 }
 
 .user-profile-badge {
@@ -121,7 +121,7 @@
   width: 34px;
   height: 34px;
   border-radius: var(--cfh-radius-full);
-  background-color: var(--cfh-primary-blue);
+  background-color: #2e7d32;
   color: #ffffff;
   font-weight: 600;
   font-size: 12px;

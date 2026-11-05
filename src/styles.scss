@@ -3,23 +3,32 @@
    ========================================================================== */
 
 :root {
-  /* Exact Design Tokens */
-  --cfh-primary-navy: #172b4d;
-  --cfh-primary-navy-dark: #0f1d32;
-  --cfh-primary-navy-light: #253858;
-  --cfh-primary-navy-subtle: #ebedf2;
+  /* ── Brand Tokens (Sotaico: green + blue) ── */
+  --cfh-primary-navy: #0d2744;
+  --cfh-primary-navy-dark: #071829;
+  --cfh-primary-navy-light: #1a3a5c;
+  --cfh-primary-navy-subtle: #e8eef5;
 
-  --cfh-bg: #f7f8fa;
+  --cfh-bg: #f4f7f4;
   --cfh-surface: #ffffff;
-  --cfh-primary-blue: #3b82f6;
-  --cfh-primary-blue-hover: #2563eb;
-  --cfh-primary-blue-light: #eff6ff;
-  --cfh-primary-blue-subtle: #dbeafe;
 
-  --cfh-success: #16a34a;
-  --cfh-success-hover: #15803d;
-  --cfh-success-light: #f0fdf4;
-  --cfh-success-border: #bbf7d0;
+  /* Blue (primary actions) */
+  --cfh-primary-blue: #1565c0;
+  --cfh-primary-blue-hover: #0d47a1;
+  --cfh-primary-blue-light: #e3f2fd;
+  --cfh-primary-blue-subtle: #bbdefb;
+
+  /* Green (brand accent) */
+  --cfh-primary-green: #2e7d32;
+  --cfh-primary-green-hover: #1b5e20;
+  --cfh-primary-green-light: #e8f5e9;
+  --cfh-primary-green-subtle: #c8e6c9;
+  --cfh-primary-green-mid: #388e3c;
+
+  --cfh-success: #2e7d32;
+  --cfh-success-hover: #1b5e20;
+  --cfh-success-light: #e8f5e9;
+  --cfh-success-border: #a5d6a7;
 
   --cfh-error: #dc2626;
   --cfh-error-hover: #b91c1c;
@@ -240,7 +249,7 @@ h1, h2, h3, h4, h5, h6 {
   &:focus {
     outline: none;
     border-color: var(--cfh-primary-blue);
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+    box-shadow: 0 0 0 3px rgba(21, 101, 192, 0.15);
   }
 
   &:disabled {

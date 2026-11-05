@@ -14,7 +14,11 @@ export class FileIconComponent {
   @Input({ required: true }) type!: FileType | string;
   @Input() size: 'sm' | 'md' | 'lg' = 'sm';
 
-  get iconName(): 'file-text' | 'file' {
+  get iconName(): 'file-text' | 'file' | 'folder' {
+    const t = (this.type || '').toLowerCase();
+    if (t === 'zip' || t === 'folder') {
+      return 'folder';
+    }
     return 'file-text';
   }
 

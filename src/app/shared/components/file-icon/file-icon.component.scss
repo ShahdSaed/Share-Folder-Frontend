@@ -53,15 +53,15 @@
 }
 
 .type-docx {
-  background-color: #dbeafe;
-  color: #2563eb;
-  border: 1px solid #bfdbfe;
+  background-color: #e3f2fd;
+  color: #1565c0;
+  border: 1px solid #bbdefb;
 }
 
 .type-xlsx {
-  background-color: #dcfce7;
-  color: #16a34a;
-  border: 1px solid #bbf7d0;
+  background-color: #e8f5e9;
+  color: #2e7d32;
+  border: 1px solid #c8e6c9;
 }
 
 .type-pptx {
@@ -70,9 +70,15 @@
   border: 1px solid #fed7aa;
 }
 
-.type-txt,
-.type-zip {
+.type-txt {
   background-color: #f3f4f6;
   color: #4b5563;
   border: 1px solid #e5e7eb;
+}
+
+.type-zip,
+.type-folder {
+  background-color: #fef3c7;
+  color: #b45309;
+  border: 1px solid #fde68a;
 }

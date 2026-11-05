@@ -1,7 +1,6 @@
 .cfh-topbar {
   height: var(--cfh-topbar-height);
   background-color: var(--cfh-surface);
-  border-bottom: 1px solid var(--cfh-border);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -31,12 +30,16 @@
   }
 }
 
-.system-title {
-  font-size: var(--cfh-font-size-small);
+.topbar-context {
+  display: flex;
+  align-items: center;
+}
+
+.topbar-title {
+  font-size: 13.5px;
+  font-weight: 400;
   color: var(--cfh-text-secondary);
-  font-weight: 500;
   letter-spacing: 0.02em;
-  text-transform: uppercase;
 }
 
 .topbar-right {
@@ -55,7 +58,7 @@
   width: 34px;
   height: 34px;
   border-radius: 50%;
-  background: linear-gradient(135deg, var(--cfh-primary-navy), var(--cfh-primary-blue));
+  background: linear-gradient(135deg, #1565c0, #2e7d32);
   color: #ffffff;
   display: flex;
   align-items: center;
@@ -87,7 +90,7 @@
     display: flex;
   }
 
-  .system-title {
+  .topbar-title {
     display: none;
   }
 }
