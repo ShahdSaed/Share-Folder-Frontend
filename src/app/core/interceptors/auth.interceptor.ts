@@ -34,8 +34,17 @@ export const authInterceptor: HttpInterceptorFn = (
 ): Observable<HttpEvent<unknown>> => {
   const authService = inject(AuthService);
 
+  // Set ngrok bypass header if targeting ngrok tunnels
+  const customHeaders: Record<string, string> = {};
+  if (req.url.includes('ngrok')) {
+    customHeaders['ngrok-skip-browser-warning'] = 'true';
+  }
+
   // Always send credentials (HttpOnly cookie) for all API requests
-  let modifiedReq = req.clone({ withCredentials: true });
+  let modifiedReq = req.clone({
+    setHeaders: customHeaders,
+    withCredentials: true,
+  });
 
   // Attach the in-memory access token if available
   const token = authService.getAccessToken();
