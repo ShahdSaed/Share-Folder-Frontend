@@ -47,12 +47,22 @@ export class AuthService {
   private setSession(token: string, apiUser: ApiUser): void {
     this.accessToken = token;
     this.currentUserSignal.set(mapApiUser(apiUser));
+    try {
+      localStorage.setItem('company_hub_has_session', 'true');
+    } catch {
+      // Ignore if localStorage is restricted
+    }
   }
 
   /** Clears in-memory session. Called on logout or failed refresh. */
   public clearSession(): void {
     this.accessToken = null;
     this.currentUserSignal.set(null);
+    try {
+      localStorage.removeItem('company_hub_has_session');
+    } catch {
+      // Ignore
+    }
     this.router.navigate(['/login']);
   }
 
@@ -89,9 +99,25 @@ export class AuthService {
    * Silently succeeds or fails without redirecting.
    */
   public tryRestoreSession(): Observable<boolean> {
+    try {
+      const hasSession = localStorage.getItem('company_hub_has_session');
+      if (!hasSession) {
+        return of(false);
+      }
+    } catch {
+      // Proceed if localStorage is unavailable
+    }
+
     return this.refreshToken().pipe(
       map(() => true),
-      catchError(() => of(false))
+      catchError(() => {
+        try {
+          localStorage.removeItem('company_hub_has_session');
+        } catch {
+          // Ignore
+        }
+        return of(false);
+      })
     );
   }
 
@@ -135,6 +161,11 @@ export class AuthService {
   private _finishLogout(): void {
     this.accessToken = null;
     this.currentUserSignal.set(null);
+    try {
+      localStorage.removeItem('company_hub_has_session');
+    } catch {
+      // Ignore
+    }
     this.toastService.info('Signed out successfully');
     this.router.navigate(['/login']);
   }
