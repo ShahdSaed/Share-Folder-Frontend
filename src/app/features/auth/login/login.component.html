@@ -3,12 +3,12 @@
 
     <!-- Header -->
     <div class="login-header">
-      <div class="brand-mark">
-        <app-icon name="shield" [size]="22" color="#ffffff"></app-icon>
+      <div class="login-logo-wrap">
+        <img src="logo.png" alt="Sotaico Pest Control" class="login-logo" />
       </div>
-      <p class="product-name">Company File Hub</p>
+      <p class="product-name">Shared Folder Portal</p>
       <h1 class="welcome-heading">Welcome Back</h1>
-      <p class="welcome-subtitle">Sign in to access your company's secure documents.</p>
+      <p class="welcome-subtitle">Sign in to access Sotaico Pest Control secure documents.</p>
     </div>
 
     <!-- Login Form -->
@@ -47,7 +47,7 @@
         <div class="input-with-addon">
           <input
             id="password"
-            [type]="showPassword ? 'text' : 'password'"
+            [type]="showPassword() ? 'text' : 'password'"
             formControlName="password"
             [class]="'form-control' + (passwordInvalid ? ' is-invalid' : '')"
             placeholder="Enter your password"
@@ -58,10 +58,10 @@
           <button
             type="button"
             class="input-addon-btn"
-            (click)="showPassword = !showPassword"
-            [attr.aria-label]="showPassword ? 'Hide password' : 'Show password'"
+            (click)="showPassword.set(!showPassword())"
+            [attr.aria-label]="showPassword() ? 'Hide password' : 'Show password'"
           >
-            <app-icon [name]="showPassword ? 'eye-off' : 'eye'" [size]="16"></app-icon>
+            <app-icon [name]="showPassword() ? 'eye-off' : 'eye'" [size]="16"></app-icon>
           </button>
         </div>
         @if (passwordInvalid) {
@@ -81,10 +81,10 @@
       </div>
 
       <!-- Error State -->
-      @if (loginError) {
+      @if (loginError()) {
         <div class="login-error-msg" role="alert">
           <app-icon name="alert-circle" [size]="16"></app-icon>
-          {{ loginError }}
+          {{ loginError() }}
         </div>
       }
 
@@ -94,8 +94,8 @@
         variant="primary"
         size="lg"
         [fullWidth]="true"
-        [loading]="isLoading"
-        [disabled]="loginForm.invalid || isLoading"
+        [loading]="isLoading()"
+        [disabled]="loginForm.invalid || isLoading()"
       >
         Sign In
       </app-button>

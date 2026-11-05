@@ -46,6 +46,9 @@
 
 .timestamp-cell {
   white-space: nowrap;
+}
+
+.timestamp-col {
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -64,10 +67,13 @@
 }
 
 .user-cell {
+  white-space: nowrap;
+}
+
+.user-col {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  white-space: nowrap;
 }
 
 .user-name {
@@ -78,6 +84,14 @@
 .user-email {
   font-size: 11px;
   color: var(--cfh-text-secondary);
+}
+
+.file-name-ref {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--cfh-text-main);
+  font-weight: 500;
 }
 
 .action-badge {

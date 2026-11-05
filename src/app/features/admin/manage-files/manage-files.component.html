@@ -3,7 +3,7 @@
   <div class="page-header-row">
     <div>
       <h1 class="page-title">Manage Files</h1>
-      <p class="text-secondary">Upload, edit, and delete company documents.</p>
+      <p class="text-secondary">Upload, edit, and manage Sotaico Pest Control documents.</p>
     </div>
     <app-button variant="primary" (btnClick)="openUploadModal()">
       <app-icon name="upload" [size]="16"></app-icon>
@@ -20,11 +20,11 @@
           type="search"
           class="form-control search-input"
           placeholder="Search files..."
-          [(ngModel)]="searchQuery"
-          (ngModelChange)="currentPage = 1"
+          [ngModel]="searchQuery()"
+          (ngModelChange)="searchQuery.set($event); currentPage.set(1)"
         />
       </div>
-      <select class="form-control filter-select" [(ngModel)]="typeFilter" (ngModelChange)="currentPage = 1">
+      <select class="form-control filter-select" [ngModel]="typeFilter()" (ngModelChange)="typeFilter.set($event); currentPage.set(1)">
         <option value="">All Types</option>
         @for (t of fileTypes; track t) {
           <option [value]="t">{{ t }}</option>
@@ -57,7 +57,11 @@
                   <span class="file-name">{{ file.name }}</span>
                 </div>
               </td>
-              <td><app-status-badge variant="neutral" size="sm" [showDot]="false">{{ file.type }}</app-status-badge></td>
+              <td>
+                <app-status-badge [variant]="file.type === 'ZIP' ? 'warning' : 'neutral'" size="sm" [showDot]="false">
+                  {{ file.type === 'ZIP' ? 'FOLDER' : file.type }}
+                </app-status-badge>
+              </td>
               <td class="size-cell">{{ file.size | fileSize }}</td>
               <td class="secondary-cell">{{ file.uploadedBy }}</td>
               <td class="secondary-cell">{{ file.updatedAt | timeAgo }}</td>
@@ -65,6 +69,9 @@
                 <div class="action-btn-group">
                   <button type="button" class="action-icon-btn" (click)="onView(file)" title="View">
                     <app-icon name="eye" [size]="14"></app-icon>
+                  </button>
+                  <button type="button" class="action-icon-btn" (click)="openAccessModal(file)" title="Manage Viewer Access">
+                    <app-icon name="users" [size]="14"></app-icon>
                   </button>
                   <button type="button" class="action-icon-btn" (click)="openEditModal(file)" title="Edit metadata">
                     <app-icon name="edit" [size]="14"></app-icon>
@@ -82,10 +89,10 @@
         </tbody>
       </table>
       <app-pagination
-        [currentPage]="currentPage"
+        [currentPage]="currentPage()"
         [totalItems]="filteredFiles().length"
         [pageSize]="pageSize"
-        (pageChange)="currentPage = $event"
+        (pageChange)="currentPage.set($event)"
       ></app-pagination>
     </div>
   } @else {
@@ -94,37 +101,103 @@
 </div>
 
 <!-- Upload Modal -->
-<app-modal [isOpen]="showUploadModal()" title="Upload File" subtitle="Select a file and configure encryption security settings." size="md" (closed)="closeUploadModal()">
+<app-modal [isOpen]="showUploadModal()" [title]="uploadMode() === 'folder' ? 'Upload Protected Folder' : 'Upload File'" subtitle="Select content and configure encryption security settings." size="md" (closed)="closeUploadModal()">
   @if (!uploadSuccess()) {
     <form [formGroup]="uploadForm" (ngSubmit)="onUpload()" novalidate>
-      <!-- Drag & Drop Zone -->
-      <div
-        [class]="'drop-zone' + (isDragOver ? ' drag-over' : '') + (selectedFile() ? ' has-file' : '')"
-        (dragover)="onDragOver($event)"
-        (dragleave)="isDragOver = false"
-        (drop)="onDrop($event)"
-        (click)="fileInput.click()"
-      >
-        <input #fileInput type="file" hidden (change)="onFileSelected($event)" />
-        @if (selectedFile()) {
-          <div class="selected-file-preview">
-            <app-file-icon [type]="guessedType()" size="md"></app-file-icon>
-            <div class="preview-info">
-              <span class="preview-name">{{ selectedFile()!.name }}</span>
-              <span class="preview-size">{{ selectedFile()!.size | fileSize }}</span>
+      <!-- Upload Mode Switcher -->
+      <div class="upload-mode-selector">
+        <button
+          type="button"
+          class="mode-pill"
+          [class.active]="uploadMode() === 'file'"
+          (click)="setUploadMode('file')"
+        >
+          <app-icon name="file-text" [size]="15"></app-icon>
+          <span>Single File</span>
+        </button>
+        <button
+          type="button"
+          class="mode-pill"
+          [class.active]="uploadMode() === 'folder'"
+          (click)="setUploadMode('folder')"
+        >
+          <app-icon name="folder" [size]="15"></app-icon>
+          <span>Complete Folder</span>
+        </button>
+      </div>
+
+      @if (uploadMode() === 'file') {
+        <!-- Drag & Drop Zone (Single File or ZIP) -->
+        <div
+          [class]="'drop-zone' + (isDragOver ? ' drag-over' : '') + (selectedFile() ? ' has-file' : '')"
+          (dragover)="onDragOver($event)"
+          (dragleave)="isDragOver = false"
+          (drop)="onDrop($event)"
+          (click)="fileInput.click()"
+        >
+          <input #fileInput type="file" hidden (change)="onFileSelected($event)" />
+          @if (selectedFile()) {
+            <div class="selected-file-preview">
+              <app-file-icon [type]="guessedType()" size="md"></app-file-icon>
+              <div class="preview-info">
+                <span class="preview-name">{{ selectedFile()!.name }}</span>
+                <span class="preview-size">{{ selectedFile()!.size | fileSize }}</span>
+              </div>
+              <button type="button" class="remove-file-btn" (click)="$event.stopPropagation(); removeFile()">
+                <app-icon name="x" [size]="16"></app-icon>
+              </button>
             </div>
-            <button type="button" class="remove-file-btn" (click)="$event.stopPropagation(); removeFile()">
-              <app-icon name="x" [size]="16"></app-icon>
-            </button>
-          </div>
-        } @else {
-          <div class="drop-placeholder">
-            <app-icon name="upload" [size]="28" [strokeWidth]="1.5"></app-icon>
-            <p class="drop-main">Drag & drop file here or <span class="browse-link">browse</span></p>
-            <p class="drop-sub">PDF, DOCX, XLSX, PPTX, TXT · Maximum size {{ maxSizeMb }} MB</p>
+          } @else {
+            <div class="drop-placeholder">
+              <app-icon name="upload" [size]="28" [strokeWidth]="1.5"></app-icon>
+              <p class="drop-main">Drag & drop file here or <span class="browse-link">browse</span></p>
+              <p class="drop-sub">PDF, DOCX, XLSX, PPTX, TXT, ZIP · Maximum size {{ maxSizeMb }} MB</p>
+            </div>
+          }
+        </div>
+      } @else {
+        <!-- Folder Selection Zone -->
+        <div
+          [class]="'drop-zone folder-mode-zone' + (selectedFolderFiles().length ? ' has-file' : '')"
+          (click)="folderInput.click()"
+        >
+          <input #folderInput type="file" hidden webkitdirectory directory multiple (change)="onFolderSelected($event)" />
+          @if (selectedFolderFiles().length) {
+            <div class="selected-file-preview">
+              <div class="folder-badge-icon">
+                <app-icon name="folder" [size]="24"></app-icon>
+              </div>
+              <div class="preview-info">
+                <span class="preview-name">{{ folderName() }}</span>
+                <span class="preview-size">{{ selectedFolderFiles().length }} file(s) inside folder · {{ totalFolderSize() | fileSize }}</span>
+              </div>
+              <button type="button" class="remove-file-btn" (click)="$event.stopPropagation(); removeFolder()">
+                <app-icon name="x" [size]="16"></app-icon>
+              </button>
+            </div>
+          } @else {
+            <div class="drop-placeholder">
+              <app-icon name="folder" [size]="32" [strokeWidth]="1.5"></app-icon>
+              <p class="drop-main">Click here to choose a <span class="browse-link">complete folder</span> from your device</p>
+              <p class="drop-sub">All files inside will be uploaded and secured with a unified password</p>
+            </div>
+          }
+        </div>
+
+        @if (selectedFolderFiles().length) {
+          <div class="form-group" style="margin-top: 14px;">
+            <label for="folder-title-input">Folder Display Name <span class="required-indicator">*</span></label>
+            <input
+              id="folder-title-input"
+              type="text"
+              class="form-control"
+              [value]="folderName()"
+              (input)="folderName.set($any($event.target).value)"
+              placeholder="Enter folder name..."
+            />
           </div>
         }
-      </div>
+      }
 
       @if (uploadSizeError()) {
         <div class="upload-error-msg" role="alert">
@@ -134,7 +207,13 @@
       }
 
       <div class="form-group" style="margin-top: 16px;">
-        <label for="upload-pw">File Password <span class="required-indicator">*</span></label>
+        <div class="password-label-row">
+          <label for="upload-pw">File Password <span class="required-indicator">*</span></label>
+          <button type="button" class="generate-pw-btn" (click)="generateUploadPassword()" title="Generate random secure password">
+            <app-icon name="refresh-cw" [size]="12"></app-icon>
+            Generate Password
+          </button>
+        </div>
         <div class="input-with-addon">
           <input id="upload-pw" [type]="showUploadPw ? 'text' : 'password'" formControlName="password" class="form-control" placeholder="Set a password to protect this file" autocomplete="new-password" />
           <button type="button" class="input-addon-btn" (click)="showUploadPw = !showUploadPw">
@@ -142,7 +221,7 @@
           </button>
         </div>
         @if (uploadForm.get('password')!.invalid && uploadForm.get('password')!.touched) {
-          <span class="input-error"><app-icon name="alert-circle" [size]="12"></app-icon> Password is required.</span>
+          <span class="input-error"><app-icon name="alert-circle" [size]="12"></app-icon> Password must be at least 8 characters.</span>
         }
       </div>
 
@@ -159,16 +238,49 @@
         <textarea id="upload-desc" formControlName="description" class="form-control" rows="2" placeholder="Enter a brief document description..."></textarea>
       </div>
 
-      <p class="demo-note">
-        <app-icon name="info" [size]="12"></app-icon>
-        Demo only — no file is uploaded to any server. Changes apply to frontend session state.
+      <!-- Viewer Permissions Selection -->
+      <div class="form-group viewer-permissions-section">
+        <div class="viewer-perm-header">
+          <label class="form-label mb-0">Viewer Access Permissions</label>
+          <div class="perm-quick-actions">
+            <button type="button" class="text-btn" (click)="selectAllUploadViewers()">Select All</button>
+            <span class="sep">·</span>
+            <button type="button" class="text-btn" (click)="deselectAllUploadViewers()">Deselect All</button>
+          </div>
+        </div>
+        <p class="section-hint">Available to all viewers by default. Uncheck any user you wish to exclude.</p>
+
+        @if (viewers().length > 0) {
+          <div class="viewer-checkbox-list">
+            @for (viewer of viewers(); track viewer.id) {
+              <label class="viewer-checkbox-item">
+                <input
+                  type="checkbox"
+                  [checked]="isViewerSelectedForUpload(viewer.id)"
+                  (change)="toggleUploadViewer(viewer.id)"
+                />
+                <div class="viewer-info">
+                  <span class="viewer-name">{{ viewer.fullName }}</span>
+                  <span class="viewer-email">{{ viewer.email }}</span>
+                </div>
+              </label>
+            }
+          </div>
+        } @else {
+          <p class="no-viewers-note">No active viewer accounts found.</p>
+        }
+      </div>
+
+      <p class="security-note">
+        <app-icon name="shield-check" [size]="14"></app-icon>
+        The file will be encrypted on the server and only assigned viewers can view it.
       </p>
     </form>
   } @else {
     <div class="upload-success-state">
       <div class="success-icon-wrap"><app-icon name="check-circle" [size]="40"></app-icon></div>
-      <h3>File Added Successfully!</h3>
-      <p>The file has been added to the demo repository for this session.</p>
+      <h3>File Uploaded Successfully!</h3>
+      <p>The file is now securely saved and permissions have been configured.</p>
     </div>
   }
 
@@ -179,11 +291,11 @@
         variant="primary"
         type="submit"
         [loading]="isUploading()"
-        [disabled]="uploadForm.invalid || !selectedFile() || !!uploadSizeError() || isUploading()"
+        [disabled]="uploadForm.invalid || (uploadMode() === 'file' ? !selectedFile() : !selectedFolderFiles().length) || !!uploadSizeError() || isUploading()"
         (btnClick)="onUpload()"
       >
         <app-icon name="upload" [size]="16"></app-icon>
-        Upload File
+        {{ uploadMode() === 'folder' ? (isZipping() ? 'Compressing Folder...' : 'Upload Protected Folder') : 'Upload File' }}
       </app-button>
     } @else {
       <app-button variant="primary" (btnClick)="closeUploadModal()">Done</app-button>
@@ -205,7 +317,6 @@
       <label for="edit-desc">Description</label>
       <textarea id="edit-desc" formControlName="description" class="form-control" rows="3"></textarea>
     </div>
-    <p class="demo-note"><app-icon name="info" [size]="12"></app-icon> Changes are local session state only.</p>
   </form>
   <div modal-footer>
     <app-button variant="secondary" (btnClick)="showEditModal.set(false)">Cancel</app-button>
@@ -217,7 +328,13 @@
 <app-modal [isOpen]="showChangePwModal()" title="Change File Password" subtitle="Never reveals the existing password." size="sm" (closed)="showChangePwModal.set(false)">
   <form [formGroup]="changePasswordForm" novalidate>
     <div class="form-group">
-      <label for="new-file-pw">New Password <span class="required-indicator">*</span></label>
+      <div class="password-label-row">
+        <label for="new-file-pw">New Password <span class="required-indicator">*</span></label>
+        <button type="button" class="generate-pw-btn" (click)="generateNewFilePassword()" title="Generate random secure password">
+          <app-icon name="refresh-cw" [size]="12"></app-icon>
+          Generate Password
+        </button>
+      </div>
       <div class="input-with-addon">
         <input id="new-file-pw" [type]="showNewPw ? 'text' : 'password'" formControlName="newPassword" class="form-control" placeholder="Enter new file password" />
         <button type="button" class="input-addon-btn" (click)="showNewPw = !showNewPw">
@@ -225,10 +342,9 @@
         </button>
       </div>
       @if (changePasswordForm.get('newPassword')!.invalid && changePasswordForm.get('newPassword')!.touched) {
-        <span class="input-error"><app-icon name="alert-circle" [size]="12"></app-icon> Password must be at least 4 characters.</span>
+        <span class="input-error"><app-icon name="alert-circle" [size]="12"></app-icon> Password must be at least 8 characters.</span>
       }
     </div>
-    <p class="demo-note"><app-icon name="info" [size]="12"></app-icon> The previous password is never displayed. Demo only.</p>
   </form>
   <div modal-footer>
     <app-button variant="secondary" (btnClick)="showChangePwModal.set(false)">Cancel</app-button>
@@ -254,3 +370,120 @@
   (confirmed)="onDeleteConfirmed()"
   (cancelled)="showDeleteDialog.set(false)"
 ></app-confirmation-dialog>
+
+<!-- Manage File Access Modal -->
+<app-modal
+  [isOpen]="showAccessModal()"
+  [title]="'Manage Access — ' + (accessFile()?.name || '')"
+  subtitle="Assign or revoke viewer permissions for this file."
+  size="md"
+  (closed)="showAccessModal.set(false)"
+>
+  <div class="access-modal-content">
+    <!-- Grant New Access Section -->
+    <div class="grant-section">
+      <h4 class="grant-section-title">Grant Access to Viewer</h4>
+      <div class="grant-form-row">
+        <div class="grant-select-wrap">
+          <select
+            class="form-control"
+            [ngModel]="selectedAddViewerId()"
+            (ngModelChange)="selectedAddViewerId.set($event)"
+          >
+            <option value="">Select a viewer...</option>
+            @for (v of availableViewersForFile(); track v.id) {
+              <option [value]="v.id">{{ v.fullName }} ({{ v.email }})</option>
+            }
+          </select>
+        </div>
+        <div class="grant-days-wrap">
+          <select
+            class="form-control"
+            [ngModel]="grantExpiryDays()"
+            (ngModelChange)="grantExpiryDays.set(+$event)"
+          >
+            <option [value]="7">7 Days</option>
+            <option [value]="30">30 Days</option>
+            <option [value]="90">90 Days</option>
+            <option [value]="365">1 Year</option>
+          </select>
+        </div>
+        <app-button
+          variant="primary"
+          size="sm"
+          [disabled]="!selectedAddViewerId() || isGrantingAccess()"
+          [loading]="isGrantingAccess()"
+          (btnClick)="onGrantAccess()"
+        >
+          <app-icon name="plus" [size]="14"></app-icon>
+          Grant
+        </app-button>
+      </div>
+      @if (availableViewersForFile().length === 0 && viewers().length > 0) {
+        <p class="grant-hint-text">All active viewers currently have access to this file.</p>
+      }
+    </div>
+
+    <!-- Active Grants List -->
+    <div class="grants-list-section">
+      <div class="grants-list-header">
+        <h4 class="grant-section-title">Users with Access ({{ fileGrants().length }})</h4>
+      </div>
+
+      @if (isLoadingGrants()) {
+        <div class="grants-loading">Loading permissions...</div>
+      } @else if (fileGrants().length > 0) {
+        <div class="grants-table-wrap">
+          <table class="cfh-table mini-table">
+            <thead>
+              <tr>
+                <th>Viewer</th>
+                <th>Expires</th>
+                <th style="width: 80px;">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (grant of fileGrants(); track grant.id) {
+                <tr>
+                  <td>
+                    <div class="viewer-col">
+                      <span class="viewer-name">{{ grant.user?.name || 'Viewer' }}</span>
+                      <span class="viewer-email">{{ grant.user?.email || '' }}</span>
+                    </div>
+                  </td>
+                  <td>
+                    @if (grant.expiresAt) {
+                      <span class="expiry-text">{{ grant.expiresAt | date:'MMM d, y' }}</span>
+                    } @else {
+                      <span class="expiry-text">Never</span>
+                    }
+                  </td>
+                  <td>
+                    <button
+                      type="button"
+                      class="action-icon-btn danger"
+                      title="Revoke access"
+                      (click)="onRevokeAccess(grant)"
+                    >
+                      <app-icon name="trash" [size]="14"></app-icon>
+                    </button>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      } @else {
+        <div class="empty-grants-box">
+          <app-icon name="shield" [size]="24" class="text-muted"></app-icon>
+          <p>No viewers currently have access to this file.</p>
+          <span class="text-secondary">Select a viewer above to grant access.</span>
+        </div>
+      }
+    </div>
+  </div>
+
+  <div modal-footer>
+    <app-button variant="secondary" (btnClick)="showAccessModal.set(false)">Close</app-button>
+  </div>
+</app-modal>

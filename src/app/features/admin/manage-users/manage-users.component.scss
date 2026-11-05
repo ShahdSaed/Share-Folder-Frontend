@@ -113,3 +113,65 @@
     &:hover { background-color: var(--cfh-success-light); }
   }
 }
+
+.password-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+
+  label {
+    margin-bottom: 0;
+  }
+}
+
+.generate-pw-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: none;
+  border: none;
+  color: var(--cfh-primary-blue);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 3px 8px;
+  border-radius: var(--cfh-radius-sm);
+  transition: all 0.15s ease;
+
+  &:hover {
+    background-color: var(--cfh-primary-blue-light);
+    color: var(--cfh-primary-navy);
+  }
+}
+
+.input-with-addon {
+  position: relative;
+  width: 100%;
+
+  .form-control {
+    padding-right: 42px;
+    width: 100%;
+  }
+
+  .input-addon-btn {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: var(--cfh-text-secondary);
+    cursor: pointer;
+    padding: 4px;
+    border-radius: var(--cfh-radius-sm);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.15s ease;
+
+    &:hover {
+      color: var(--cfh-text-main);
+    }
+  }
+}

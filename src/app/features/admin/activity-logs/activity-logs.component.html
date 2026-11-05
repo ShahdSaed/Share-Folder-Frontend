@@ -16,19 +16,19 @@
           type="search"
           class="form-control search-input"
           placeholder="Search by user or file..."
-          [(ngModel)]="searchQuery"
-          (ngModelChange)="currentPage = 1"
+          [ngModel]="searchQuery()"
+          (ngModelChange)="searchQuery.set($event); currentPage.set(1)"
         />
       </div>
 
-      <select class="form-control filter-select" [(ngModel)]="actionFilter" (ngModelChange)="currentPage = 1">
+      <select class="form-control filter-select" [ngModel]="actionFilter()" (ngModelChange)="actionFilter.set($event); currentPage.set(1)">
         <option value="">All Actions</option>
         @for (action of actionTypes; track action) {
-          <option [value]="action">{{ action }}</option>
+          <option [value]="action">{{ formatAction(action) }}</option>
         }
       </select>
 
-      <select class="form-control filter-select" [(ngModel)]="resultFilter" (ngModelChange)="currentPage = 1">
+      <select class="form-control filter-select" [ngModel]="resultFilter()" (ngModelChange)="resultFilter.set($event); currentPage.set(1)">
         <option value="">All Results</option>
         <option value="SUCCESS">Success</option>
         <option value="FAILED">Failed</option>
@@ -51,32 +51,45 @@
       <table class="cfh-table">
         <thead>
           <tr>
-            <th>Timestamp</th>
-            <th>User</th>
-            <th>Action</th>
+            <th style="width: 160px;">Timestamp</th>
+            <th style="width: 220px;">User</th>
+            <th style="width: 190px;">Action</th>
             <th>Target File</th>
-            <th>IP Address</th>
-            <th>Result</th>
+            <th style="width: 170px;">IP Address</th>
+            <th style="width: 130px;">Result</th>
           </tr>
         </thead>
         <tbody>
           @for (log of pagedLogs(); track log.id) {
             <tr [class.row-failed]="log.result === 'FAILED'">
               <td class="timestamp-cell">
-                <span class="ts-date">{{ log.timestamp | date:'MMM d, yyyy' }}</span>
-                <span class="ts-time">{{ log.timestamp | date:'HH:mm:ss' }}</span>
+                <div class="timestamp-col">
+                  <span class="ts-date">{{ log.timestamp | date:'MMM d, yyyy' }}</span>
+                  <span class="ts-time">{{ log.timestamp | date:'HH:mm:ss' }}</span>
+                </div>
               </td>
               <td class="user-cell">
-                <span class="user-name">{{ log.userName }}</span>
-                <span class="user-email">{{ log.userEmail }}</span>
+                <div class="user-col">
+                  <span class="user-name">{{ log.userName }}</span>
+                  <span class="user-email">{{ log.userEmail }}</span>
+                </div>
               </td>
-              <td>
+              <td class="action-cell">
                 <span [class]="'action-badge action-' + getActionCategory(log.action)">
-                  {{ log.action }}
+                  {{ formatAction(log.action) }}
                 </span>
               </td>
-              <td class="target-cell">{{ log.targetFile || '—' }}</td>
-              <td class="ip-cell"><code>{{ log.ipAddress }}</code></td>
+              <td class="target-cell">
+                @if (log.targetFile) {
+                  <span class="file-name-ref">
+                    <app-icon name="file-text" [size]="14"></app-icon>
+                    {{ resolveTarget(log.targetFile) }}
+                  </span>
+                } @else {
+                  <span class="text-muted">—</span>
+                }
+              </td>
+              <td class="ip-cell"><code>{{ formatIp(log.ipAddress) }}</code></td>
               <td>
                 <app-status-badge
                   [variant]="log.result === 'SUCCESS' ? 'success' : 'error'"
@@ -90,10 +103,10 @@
         </tbody>
       </table>
       <app-pagination
-        [currentPage]="currentPage"
+        [currentPage]="currentPage()"
         [totalItems]="filteredLogs().length"
         [pageSize]="pageSize"
-        (pageChange)="currentPage = $event"
+        (pageChange)="currentPage.set($event)"
       ></app-pagination>
     </div>
   } @else {

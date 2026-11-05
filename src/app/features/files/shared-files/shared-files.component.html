@@ -27,8 +27,8 @@
           type="search"
           class="form-control search-input"
           placeholder="Search files..."
-          [(ngModel)]="searchQuery"
-          (ngModelChange)="onSearch()"
+          [ngModel]="searchQuery()"
+          (ngModelChange)="searchQuery.set($event); currentPage.set(1)"
           aria-label="Search files"
         />
       </div>
@@ -36,8 +36,8 @@
       <!-- Type Filter -->
       <select
         class="form-control filter-select"
-        [(ngModel)]="typeFilter"
-        (ngModelChange)="onFilter()"
+        [ngModel]="typeFilter()"
+        (ngModelChange)="typeFilter.set($event); currentPage.set(1)"
         aria-label="Filter by file type"
       >
         <option value="">All Types</option>
@@ -49,8 +49,8 @@
       <!-- Sort -->
       <select
         class="form-control filter-select"
-        [(ngModel)]="sortField"
-        (ngModelChange)="onSort()"
+        [ngModel]="sortField()"
+        (ngModelChange)="sortField.set($event); currentPage.set(1)"
         aria-label="Sort files"
       >
         <option value="name">Name</option>
@@ -58,9 +58,9 @@
         <option value="updatedAt">Last Updated</option>
       </select>
 
-      <button type="button" class="sort-dir-btn" (click)="toggleSortDir()" [attr.aria-label]="'Sort ' + (sortDir === 'asc' ? 'descending' : 'ascending')">
+      <button type="button" class="sort-dir-btn" (click)="toggleSortDir()" [attr.aria-label]="'Sort ' + (sortDir() === 'asc' ? 'descending' : 'ascending')">
         <app-icon name="arrow-up-down" [size]="16"></app-icon>
-        {{ sortDir === 'asc' ? 'ASC' : 'DESC' }}
+        {{ sortDir() === 'asc' ? 'ASC' : 'DESC' }}
       </button>
     </div>
 
@@ -96,7 +96,9 @@
                 </div>
               </td>
               <td>
-                <app-status-badge variant="neutral" size="sm" [showDot]="false">{{ file.type }}</app-status-badge>
+                <app-status-badge [variant]="file.type === 'ZIP' ? 'warning' : 'neutral'" size="sm" [showDot]="false">
+                  {{ file.type === 'ZIP' ? 'FOLDER' : file.type }}
+                </app-status-badge>
               </td>
               <td class="size-cell">{{ file.size | fileSize }}</td>
               <td class="secondary-cell">{{ file.uploadedBy }}</td>
@@ -131,7 +133,7 @@
         </tbody>
       </table>
       <app-pagination
-        [currentPage]="currentPage"
+        [currentPage]="currentPage()"
         [totalItems]="filteredFiles().length"
         [pageSize]="pageSize"
         (pageChange)="onPageChange($event)"

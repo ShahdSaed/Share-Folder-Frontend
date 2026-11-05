@@ -1,6 +1,7 @@
 import { Component, EventEmitter, Input, Output, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { HttpErrorResponse } from '@angular/common/http';
 import { FileItem } from '../../../core/models/file-item.model';
 import { FileService } from '../../../core/services/file.service';
 import { ToastService } from '../../../core/services/toast.service';
@@ -42,18 +43,28 @@ export class FilePasswordModalComponent {
 
     const password: string = this.form.value.password as string;
 
-    setTimeout(() => {
-      const result = this.fileService.verifyPassword(this.file!.id, password);
-      this.isLoading.set(false);
-
-      if (result.success) {
+    this.fileService.verifyPassword(this.file.id, password).subscribe({
+      next: () => {
+        this.isLoading.set(false);
         this.toastService.success(`${this.file!.name} unlocked successfully.`, 'File Opened');
         this.unlocked.emit(this.file!.id);
         this.reset();
-      } else {
-        this.errorMessage.set(result.message || 'Incorrect password. Please try again.');
-      }
-    }, 600);
+      },
+      error: (err: HttpErrorResponse) => {
+        this.isLoading.set(false);
+        if (err.status === 401) {
+          this.errorMessage.set('Incorrect password. Please try again.');
+        } else if (err.status === 429) {
+          this.errorMessage.set('Too many failed attempts. Please wait 15 minutes before trying again.');
+        } else if (err.status === 403) {
+          this.errorMessage.set('You do not have access to this file.');
+        } else if (err.status === 0) {
+          this.errorMessage.set('Cannot connect to server. Please check your connection.');
+        } else {
+          this.errorMessage.set(err.error?.message ?? 'Incorrect password. Please try again.');
+        }
+      },
+    });
   }
 
   onCancel(): void {

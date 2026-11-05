@@ -11,30 +11,30 @@
   <div class="stats-grid">
     <app-summary-card
       label="Total Files"
-      [value]="stats().totalFiles"
+      [value]="stats()?.totalFiles ?? 0"
       icon="folder"
-      [trend]="stats().filesTrend"
+      [trend]="stats()?.filesTrend"
       theme="blue"
     ></app-summary-card>
     <app-summary-card
       label="Total Users"
-      [value]="stats().totalUsers"
+      [value]="stats()?.totalUsers ?? 0"
       icon="users"
-      [trend]="stats().usersTrend"
+      [trend]="stats()?.usersTrend"
       theme="navy"
     ></app-summary-card>
     <app-summary-card
       label="Successful File Views"
-      [value]="stats().successfulFileViews"
+      [value]="stats()?.successfulFileViews ?? 0"
       icon="eye"
-      [trend]="stats().viewsTrend"
+      [trend]="stats()?.viewsTrend"
       theme="green"
     ></app-summary-card>
     <app-summary-card
       label="Security Events"
-      [value]="stats().recentSecurityEvents"
+      [value]="stats()?.recentSecurityEvents ?? 0"
       icon="shield"
-      [trend]="stats().securityTrend"
+      [trend]="stats()?.securityTrend"
       theme="amber"
     ></app-summary-card>
   </div>
@@ -63,8 +63,8 @@
             @for (log of recentLogs(); track log.id) {
               <tr>
                 <td class="cell-user">{{ log.userName }}</td>
-                <td><span class="action-code">{{ log.action }}</span></td>
-                <td class="cell-target">{{ log.targetFile || '—' }}</td>
+                <td><span class="action-code">{{ formatAction(log.action) }}</span></td>
+                <td class="cell-target">{{ resolveTarget(log.targetFile) }}</td>
                 <td class="cell-time">{{ log.timestamp | timeAgo }}</td>
                 <td>
                   <app-status-badge
@@ -74,6 +74,12 @@
                   >
                     {{ log.result }}
                   </app-status-badge>
+                </td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="5" style="text-align: center; color: var(--cfh-text-secondary); padding: 24px 16px;">
+                  No activity recorded yet
                 </td>
               </tr>
             }
@@ -100,6 +106,10 @@
                 <span class="file-by">{{ file.uploadedBy }} · {{ file.createdAt | timeAgo }}</span>
               </div>
               <span class="file-size-label">{{ file.size | fileSize }}</span>
+            </li>
+          } @empty {
+            <li style="text-align: center; color: var(--cfh-text-secondary); padding: 24px 16px; list-style: none;">
+              No files uploaded yet
             </li>
           }
         </ul>

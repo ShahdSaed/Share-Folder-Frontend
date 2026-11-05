@@ -20,16 +20,16 @@
           type="search"
           class="form-control search-input"
           placeholder="Search by name or email..."
-          [(ngModel)]="searchQuery"
-          (ngModelChange)="currentPage = 1"
+          [ngModel]="searchQuery()"
+          (ngModelChange)="searchQuery.set($event); currentPage.set(1)"
         />
       </div>
-      <select class="form-control filter-select" [(ngModel)]="roleFilter" (ngModelChange)="currentPage = 1">
+      <select class="form-control filter-select" [ngModel]="roleFilter()" (ngModelChange)="roleFilter.set($event); currentPage.set(1)">
         <option value="">All Roles</option>
         <option value="ADMIN">Admin</option>
         <option value="VIEWER">Viewer</option>
       </select>
-      <select class="form-control filter-select" [(ngModel)]="statusFilter" (ngModelChange)="currentPage = 1">
+      <select class="form-control filter-select" [ngModel]="statusFilter()" (ngModelChange)="statusFilter.set($event); currentPage.set(1)">
         <option value="">All Statuses</option>
         <option value="ACTIVE">Active</option>
         <option value="INACTIVE">Inactive</option>
@@ -98,10 +98,10 @@
         </tbody>
       </table>
       <app-pagination
-        [currentPage]="currentPage"
+        [currentPage]="currentPage()"
         [totalItems]="filteredUsers().length"
         [pageSize]="pageSize"
-        (pageChange)="currentPage = $event"
+        (pageChange)="currentPage.set($event)"
       ></app-pagination>
     </div>
   } @else {
@@ -132,6 +132,39 @@
         <span class="input-error"><app-icon name="alert-circle" [size]="12"></app-icon> Valid email required.</span>
       }
     </div>
+
+    @if (!editingUser()) {
+      <div class="form-group">
+        <div class="password-label-row">
+          <label for="user-password">Password <span class="required-indicator">*</span></label>
+          <button type="button" class="generate-pw-btn" (click)="generatePassword()" title="Generate random secure password">
+            <app-icon name="refresh-cw" [size]="12"></app-icon>
+            Generate Password
+          </button>
+        </div>
+        <div class="input-with-addon">
+          <input
+            id="user-password"
+            [type]="showUserPassword ? 'text' : 'password'"
+            formControlName="password"
+            class="form-control"
+            placeholder="At least 8 characters (e.g. Viewer123!)"
+            autocomplete="new-password"
+          />
+          <button
+            type="button"
+            class="input-addon-btn"
+            (click)="showUserPassword = !showUserPassword"
+            [attr.aria-label]="showUserPassword ? 'Hide password' : 'Show password'"
+          >
+            <app-icon [name]="showUserPassword ? 'eye-off' : 'eye'" [size]="16"></app-icon>
+          </button>
+        </div>
+        @if (userForm.get('password')!.invalid && userForm.get('password')!.touched) {
+          <span class="input-error"><app-icon name="alert-circle" [size]="12"></app-icon> Password must be at least 8 characters.</span>
+        }
+      </div>
+    }
 
     <div class="form-group">
       <label for="user-role">Role <span class="required-indicator">*</span></label>
