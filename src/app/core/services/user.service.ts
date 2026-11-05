@@ -1,18 +1,78 @@
 import { Injectable, inject, signal } from '@angular/core';
-import { User, UserRole, AccountStatus } from '../models/user.model';
-import { MOCK_USERS } from '../mock-data/users.mock';
-import { AuditLogService } from './audit-log.service';
-import { AuthService } from './auth.service';
+import { HttpClient, HttpParams } from '@angular/common/http';
+import { Observable, throwError } from 'rxjs';
+import { tap, map, catchError } from 'rxjs/operators';
+import { User, ApiUser, mapApiUser } from '../models/user.model';
+import { ApiPagination } from '../models/audit-log.model';
+import { environment } from '../../../environments/environment';
+
+interface UserListResponse {
+  status: string;
+  data: {
+    users: ApiUser[];
+    pagination: ApiPagination;
+  };
+}
+
+interface UserResponse {
+  status: string;
+  data: { user: ApiUser };
+}
 
 @Injectable({
   providedIn: 'root',
 })
 export class UserService {
-  private readonly auditLogService = inject(AuditLogService);
-  private readonly authService = inject(AuthService);
+  // Existing properties and methods...
+  // Adds a convenience method to toggle a user's active status
+  public toggleStatus(id: string): Observable<void> {
+    const current = this.getUserById(id);
+    if (!current) {
+      return throwError(() => new Error('User not found'));
+    }
+    const newStatus = current.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
+    // Backend expects isActive boolean
+    const isActive = newStatus === 'ACTIVE';
+    return this.updateUser(id, { isActive }).pipe(map(() => void 0));
+  }
 
-  private readonly usersSignal = signal<User[]>([...MOCK_USERS]);
+  private readonly http = inject(HttpClient);
+  private readonly apiUrl = environment.apiUrl;
+
+  private readonly usersSignal = signal<User[]>([]);
   public readonly users = this.usersSignal.asReadonly();
+
+  // ─── List users ───────────────────────────────────────────────────────────
+
+  public loadUsers(params?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    role?: string;
+    status?: string;
+  }): Observable<{ users: User[]; pagination: ApiPagination }> {
+    let httpParams = new HttpParams();
+    if (params?.page) httpParams = httpParams.set('page', params.page);
+    if (params?.limit) httpParams = httpParams.set('limit', params.limit);
+    if (params?.search) httpParams = httpParams.set('search', params.search);
+    if (params?.role) httpParams = httpParams.set('role', params.role);
+    // Backend does not use `status` for filtering; only `role` and `search` are supported
+    // The `status` filter will be done on the frontend signal
+
+    return this.http
+      .get<UserListResponse>(`${this.apiUrl}/users`, { params: httpParams, withCredentials: true })
+      .pipe(
+        tap((res) => {
+          const mapped = res.data.users.map(mapApiUser);
+          this.usersSignal.set(mapped);
+        }),
+        map((res) => ({
+          users: res.data.users.map(mapApiUser),
+          pagination: res.data.pagination,
+        })),
+        catchError((err) => throwError(() => err))
+      );
+  }
 
   public getUsers(): User[] {
     return this.usersSignal();
@@ -22,112 +82,65 @@ export class UserService {
     return this.usersSignal().find((u) => u.id === id);
   }
 
-  public addUser(userData: {
-    fullName: string;
+  // ─── Get single user ──────────────────────────────────────────────────────
+
+  public fetchUserById(id: string): Observable<User> {
+    return this.http
+      .get<UserResponse>(`${this.apiUrl}/users/${id}`, { withCredentials: true })
+      .pipe(
+        map((res) => mapApiUser(res.data.user)),
+        catchError((err) => throwError(() => err))
+      );
+  }
+
+  // ─── Create user ──────────────────────────────────────────────────────────
+
+  public createUser(data: {
+    name: string;
     email: string;
-    role: UserRole;
-    status: AccountStatus;
-  }): User {
-    const initials = userData.fullName
-      .split(' ')
-      .map((n) => n[0])
-      .join('')
-      .toUpperCase()
-      .substring(0, 2);
-
-    const newUser: User = {
-      id: `usr-${Date.now()}`,
-      fullName: userData.fullName,
-      email: userData.email,
-      role: userData.role,
-      status: userData.status,
-      createdAt: new Date().toISOString(),
-      avatarInitials: initials || 'U',
-    };
-
-    this.usersSignal.update((current) => [...current, newUser]);
-
-    const admin = this.authService.currentUser();
-    this.auditLogService.logActivity({
-      userEmail: admin?.email || 'admin@company.com',
-      userName: admin?.fullName || 'Administrator',
-      action: 'USER_CREATED',
-      result: 'SUCCESS',
-      details: `Created new account for ${newUser.fullName} (${newUser.email}) with role ${newUser.role}`,
-    });
-
-    return newUser;
+    password: string;
+    role?: 'ADMIN' | 'VIEWER';
+  }): Observable<User> {
+    return this.http
+      .post<UserResponse>(`${this.apiUrl}/users`, data, { withCredentials: true })
+      .pipe(
+        tap((res) => {
+          const newUser = mapApiUser(res.data.user);
+          this.usersSignal.update((current) => [newUser, ...current]);
+        }),
+        map((res) => mapApiUser(res.data.user)),
+        catchError((err) => throwError(() => err))
+      );
   }
 
-  public updateUser(id: string, patch: Partial<User>): boolean {
-    const user = this.getUserById(id);
-    if (!user) return false;
+  // ─── Update user ──────────────────────────────────────────────────────────
 
-    const initials = patch.fullName
-      ? patch.fullName
-          .split(' ')
-          .map((n) => n[0])
-          .join('')
-          .toUpperCase()
-          .substring(0, 2)
-      : user.avatarInitials;
-
-    const updatedUser: User = {
-      ...user,
-      ...patch,
-      avatarInitials: initials,
-    };
-
-    this.usersSignal.update((current) =>
-      current.map((u) => (u.id === id ? updatedUser : u))
-    );
-
-    const admin = this.authService.currentUser();
-    this.auditLogService.logActivity({
-      userEmail: admin?.email || 'admin@company.com',
-      userName: admin?.fullName || 'Administrator',
-      action: 'USER_UPDATED',
-      result: 'SUCCESS',
-      details: `Updated details for ${updatedUser.fullName} (${updatedUser.email})`,
-    });
-
-    return true;
+  public updateUser(
+    id: string,
+    updates: { name?: string; role?: 'ADMIN' | 'VIEWER'; isActive?: boolean }
+  ): Observable<User> {
+    return this.http
+      .patch<UserResponse>(`${this.apiUrl}/users/${id}`, updates, { withCredentials: true })
+      .pipe(
+        tap((res) => {
+          const updated = mapApiUser(res.data.user);
+          this.usersSignal.update((current) =>
+            current.map((u) => (u.id === id ? updated : u))
+          );
+        }),
+        map((res) => mapApiUser(res.data.user)),
+        catchError((err) => throwError(() => err))
+      );
   }
 
-  public toggleStatus(id: string): boolean {
-    const user = this.getUserById(id);
-    if (!user) return false;
+  // ─── Reset password (admin only) ──────────────────────────────────────────
 
-    const newStatus: AccountStatus = user.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
-    this.updateUser(id, { status: newStatus });
-
-    const admin = this.authService.currentUser();
-    this.auditLogService.logActivity({
-      userEmail: admin?.email || 'admin@company.com',
-      userName: admin?.fullName || 'Administrator',
-      action: 'USER_STATUS_CHANGED',
-      result: 'SUCCESS',
-      details: `Account for ${user.fullName} changed to ${newStatus}`,
-    });
-
-    return true;
-  }
-
-  public deleteUser(id: string): boolean {
-    const user = this.getUserById(id);
-    if (!user) return false;
-
-    this.usersSignal.update((current) => current.filter((u) => u.id !== id));
-
-    const admin = this.authService.currentUser();
-    this.auditLogService.logActivity({
-      userEmail: admin?.email || 'admin@company.com',
-      userName: admin?.fullName || 'Administrator',
-      action: 'USER_UPDATED',
-      result: 'SUCCESS',
-      details: `Account for ${user.fullName} removed from registry`,
-    });
-
-    return true;
+  public resetUserPassword(id: string, password: string): Observable<void> {
+    return this.http
+      .post<{ status: string }>(`${this.apiUrl}/users/${id}/reset-password`, { password }, { withCredentials: true })
+      .pipe(
+        map(() => void 0),
+        catchError((err) => throwError(() => err))
+      );
   }
 }

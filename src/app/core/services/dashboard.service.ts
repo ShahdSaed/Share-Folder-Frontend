@@ -1,41 +1,102 @@
-import { Injectable, computed, inject } from '@angular/core';
+import { Injectable, inject, signal } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { Observable, forkJoin, of, throwError } from 'rxjs';
+import { map, catchError } from 'rxjs/operators';
 import { DashboardStatistics } from '../models/dashboard.model';
-import { FileService } from './file.service';
-import { UserService } from './user.service';
-import { AuditLogService } from './audit-log.service';
+import { ApiPagination } from '../models/audit-log.model';
+import { AuthService } from './auth.service';
+import { environment } from '../../../environments/environment';
 
 @Injectable({
   providedIn: 'root',
 })
 export class DashboardService {
-  private readonly fileService = inject(FileService);
-  private readonly userService = inject(UserService);
-  private readonly auditLogService = inject(AuditLogService);
+  private readonly http = inject(HttpClient);
+  private readonly authService = inject(AuthService);
+  private readonly apiUrl = environment.apiUrl;
 
-  public readonly statistics = computed<DashboardStatistics>(() => {
-    const files = this.fileService.files();
-    const users = this.userService.users();
-    const logs = this.auditLogService.logs();
+  private readonly statsSignal = signal<DashboardStatistics | null>(null);
+  public readonly statistics = this.statsSignal.asReadonly();
 
-    const successfulViews = logs.filter(
-      (l) => l.action === 'FILE_VIEWED' && l.result === 'SUCCESS'
-    ).length + 138; // Baseline historical view count
+  /**
+   * Loads dashboard statistics by fetching count-only pages from files, users, and audit-logs endpoints.
+   * Real backend totals are inferred from pagination metadata.
+   */
+  public loadStatistics(): Observable<DashboardStatistics> {
+    const isAdmin = this.authService.isAdmin();
 
-    const securityEvents = logs.filter(
-      (l) =>
-        (l.action === 'FILE_PASSWORD_FAILED' || l.action === 'LOGIN_FAILED') &&
-        l.result === 'FAILED'
-    ).length;
+    const files$ = this.http
+      .get<{ status: string; data: { files: unknown[]; pagination: ApiPagination } }>(
+        `${this.apiUrl}/files`,
+        { params: { page: 1, limit: 1 }, withCredentials: true }
+      )
+      .pipe(
+        catchError(() =>
+          of({
+            status: 'error',
+            data: {
+              files: [],
+              pagination: { total: 0, page: 1, limit: 1, totalPages: 1, hasNext: false, hasPrev: false },
+            },
+          })
+        )
+      );
 
-    return {
-      totalFiles: files.length,
-      totalUsers: users.length,
-      successfulFileViews: successfulViews,
-      recentSecurityEvents: securityEvents,
-      filesTrend: '+2 this month',
-      usersTrend: '+1 this month',
-      viewsTrend: '+18% vs last week',
-      securityTrend: `${securityEvents} failed attempts logged`,
-    };
-  });
+    const users$ = isAdmin
+      ? this.http
+          .get<{ status: string; data: { users: unknown[]; pagination: ApiPagination } }>(
+            `${this.apiUrl}/users`,
+            { params: { page: 1, limit: 1 }, withCredentials: true }
+          )
+          .pipe(
+            catchError(() =>
+              of({
+                status: 'error',
+                data: {
+                  users: [],
+                  pagination: { total: 0, page: 1, limit: 1, totalPages: 1, hasNext: false, hasPrev: false },
+                },
+              })
+            )
+          )
+      : of({
+          status: 'skipped',
+          data: {
+            users: [],
+            pagination: { total: 0, page: 1, limit: 1, totalPages: 1, hasNext: false, hasPrev: false },
+          },
+        });
+
+    const views$ = isAdmin
+      ? this.http
+          .get<{ status: string; data: { logs: unknown[]; pagination: ApiPagination } }>(
+            `${this.apiUrl}/admin/audit-logs`,
+            { params: { action: 'FILE_ACCESSED', result: 'Success', page: 1, limit: 1 }, withCredentials: true }
+          )
+          .pipe(catchError(() => of(null)))
+      : of(null);
+
+    const security$ = isAdmin
+      ? this.http
+          .get<{ status: string; data: { logs: unknown[]; pagination: ApiPagination } }>(
+            `${this.apiUrl}/admin/audit-logs`,
+            { params: { result: 'Failed', page: 1, limit: 1 }, withCredentials: true }
+          )
+          .pipe(catchError(() => of(null)))
+      : of(null);
+
+    return forkJoin({ files: files$, users: users$, views: views$, security: security$ }).pipe(
+      map(({ files, users, views, security }) => {
+        const stats: DashboardStatistics = {
+          totalFiles: files.data?.pagination?.total ?? 0,
+          totalUsers: users.data?.pagination?.total ?? 0,
+          successfulFileViews: views?.data?.pagination?.total ?? 0,
+          recentSecurityEvents: security?.data?.pagination?.total ?? 0,
+        };
+        this.statsSignal.set(stats);
+        return stats;
+      }),
+      catchError((err) => throwError(() => err))
+    );
+  }
 }

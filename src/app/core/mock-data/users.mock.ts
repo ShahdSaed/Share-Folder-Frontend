@@ -7,7 +7,6 @@ export const MOCK_ADMIN_USER: User = {
   role: 'ADMIN',
   status: 'ACTIVE',
   createdAt: '2025-01-15T09:00:00Z',
-  lastLoginAt: '2026-10-26T08:30:00Z',
   avatarInitials: 'AM',
 };
 
@@ -18,7 +17,6 @@ export const MOCK_VIEWER_USER: User = {
   role: 'VIEWER',
   status: 'ACTIVE',
   createdAt: '2025-02-10T10:15:00Z',
-  lastLoginAt: '2026-10-25T16:45:00Z',
   avatarInitials: 'SC',
 };
 
@@ -32,7 +30,6 @@ export const MOCK_USERS: User[] = [
     role: 'ADMIN',
     status: 'ACTIVE',
     createdAt: '2025-03-01T11:20:00Z',
-    lastLoginAt: '2026-10-24T14:10:00Z',
     avatarInitials: 'MV',
   },
   {
@@ -42,7 +39,6 @@ export const MOCK_USERS: User[] = [
     role: 'VIEWER',
     status: 'ACTIVE',
     createdAt: '2025-04-18T13:45:00Z',
-    lastLoginAt: '2026-10-22T09:30:00Z',
     avatarInitials: 'ER',
   },
   {
@@ -52,7 +48,6 @@ export const MOCK_USERS: User[] = [
     role: 'VIEWER',
     status: 'INACTIVE',
     createdAt: '2025-05-12T08:00:00Z',
-    lastLoginAt: '2026-08-14T11:00:00Z',
     avatarInitials: 'DK',
   },
   {
@@ -62,7 +57,6 @@ export const MOCK_USERS: User[] = [
     role: 'VIEWER',
     status: 'ACTIVE',
     createdAt: '2025-06-25T15:30:00Z',
-    lastLoginAt: '2026-10-26T07:15:00Z',
     avatarInitials: 'RA',
   },
   {
@@ -72,7 +66,6 @@ export const MOCK_USERS: User[] = [
     role: 'VIEWER',
     status: 'ACTIVE',
     createdAt: '2025-08-04T09:40:00Z',
-    lastLoginAt: '2026-10-20T12:00:00Z',
     avatarInitials: 'JW',
   },
 ];

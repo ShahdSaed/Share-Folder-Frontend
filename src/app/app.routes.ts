@@ -1,8 +1,8 @@
 import { Routes } from '@angular/router';
-import { authGuard, adminGuard } from './guards/auth.guard';
+import { authGuard, adminGuard, dashboardGuard } from './guards/auth.guard';
 
 export const routes: Routes = [
-  // Redirect root to dashboard
+  // Redirect root: Admin → dashboard, Viewer → shared-files (handled by dashboardGuard)
   {
     path: '',
     redirectTo: '/dashboard',
@@ -13,7 +13,7 @@ export const routes: Routes = [
     path: 'login',
     loadComponent: () =>
       import('./features/auth/login/login.component').then((m) => m.LoginComponent),
-    title: 'Sign In — Company File Hub',
+    title: 'Shared Folder - Sotaico Pest Control',
   },
   // Authenticated routes - inside main layout
   {
@@ -24,9 +24,10 @@ export const routes: Routes = [
     children: [
       {
         path: 'dashboard',
+        canActivate: [dashboardGuard],
         loadComponent: () =>
           import('./features/dashboard/dashboard.component').then((m) => m.DashboardComponent),
-        title: 'Dashboard — Company File Hub',
+        title: 'Shared Folder - Sotaico Pest Control',
       },
       {
         path: 'shared-files',
@@ -34,7 +35,7 @@ export const routes: Routes = [
           import('./features/files/shared-files/shared-files.component').then(
             (m) => m.SharedFilesComponent
           ),
-        title: 'Shared Files — Company File Hub',
+        title: 'Shared Folder - Sotaico Pest Control',
       },
       {
         path: 'document-viewer/:id',
@@ -42,7 +43,7 @@ export const routes: Routes = [
           import('./features/document-viewer/document-viewer.component').then(
             (m) => m.DocumentViewerComponent
           ),
-        title: 'Document Viewer — Company File Hub',
+        title: 'Shared Folder - Sotaico Pest Control',
       },
       // Admin-only routes
       {
@@ -55,7 +56,7 @@ export const routes: Routes = [
               import('./features/admin/manage-files/manage-files.component').then(
                 (m) => m.ManageFilesComponent
               ),
-            title: 'Manage Files — Company File Hub',
+            title: 'Shared Folder - Sotaico Pest Control',
           },
           {
             path: 'manage-users',
@@ -63,7 +64,7 @@ export const routes: Routes = [
               import('./features/admin/manage-users/manage-users.component').then(
                 (m) => m.ManageUsersComponent
               ),
-            title: 'Manage Users — Company File Hub',
+            title: 'Shared Folder - Sotaico Pest Control',
           },
           {
             path: 'activity-logs',
@@ -71,7 +72,7 @@ export const routes: Routes = [
               import('./features/admin/activity-logs/activity-logs.component').then(
                 (m) => m.ActivityLogsComponent
               ),
-            title: 'Activity Logs — Company File Hub',
+            title: 'Shared Folder - Sotaico Pest Control',
           },
           {
             path: '',

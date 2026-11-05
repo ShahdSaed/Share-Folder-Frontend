@@ -24,6 +24,23 @@ export const adminGuard: CanActivateFn = () => {
     return router.parseUrl('/login');
   }
 
-  // Authenticated but not admin
-  return router.parseUrl('/dashboard');
+  // Authenticated but not admin — redirect to shared files
+  return router.parseUrl('/shared-files');
+};
+
+/** Prevents VIEWER users from accessing the Dashboard */
+export const dashboardGuard: CanActivateFn = () => {
+  const authService = inject(AuthService);
+  const router = inject(Router);
+
+  if (!authService.isAuthenticated()) {
+    return router.parseUrl('/login');
+  }
+
+  if (authService.isAdmin()) {
+    return true;
+  }
+
+  // Viewer — send to shared files directly
+  return router.parseUrl('/shared-files');
 };

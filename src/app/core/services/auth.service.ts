@@ -1,140 +1,200 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Router } from '@angular/router';
-import { User, UserRole } from '../models/user.model';
-import { MOCK_ADMIN_USER, MOCK_VIEWER_USER, MOCK_USERS } from '../mock-data/users.mock';
-import { AuditLogService } from './audit-log.service';
+import { Observable, throwError, of } from 'rxjs';
+import { tap, map, catchError } from 'rxjs/operators';
+import { User, ApiUser, mapApiUser } from '../models/user.model';
 import { ToastService } from './toast.service';
+import { environment } from '../../../environments/environment';
 
-const DEMO_SESSION_KEY = 'cfh_demo_session_user';
+interface AuthResponse {
+  status: string;
+  message?: string;
+  data: {
+    token?: string;
+    accessToken?: string;
+    expiresIn?: string;
+    user: ApiUser;
+  };
+}
 
 @Injectable({
   providedIn: 'root',
 })
 export class AuthService {
+  private readonly http = inject(HttpClient);
   private readonly router = inject(Router);
-  private readonly auditLogService = inject(AuditLogService);
   private readonly toastService = inject(ToastService);
 
-  // Initialize with persisted demo session if available, else null (requiring login)
-  private readonly currentUserSignal = signal<User | null>(this.getInitialUser());
+  private readonly apiUrl = environment.apiUrl;
+
+  // In-memory access token — NEVER stored in localStorage/sessionStorage
+  private accessToken: string | null = null;
+
+  private readonly currentUserSignal = signal<User | null>(null);
 
   public readonly currentUser = this.currentUserSignal.asReadonly();
   public readonly isAuthenticated = computed(() => this.currentUserSignal() !== null);
   public readonly isAdmin = computed(() => this.currentUserSignal()?.role === 'ADMIN');
   public readonly isViewer = computed(() => this.currentUserSignal()?.role === 'VIEWER');
 
-  private getInitialUser(): User | null {
-    try {
-      const saved = localStorage.getItem(DEMO_SESSION_KEY);
-      if (saved) {
-        return JSON.parse(saved) as User;
-      }
-    } catch {
-      // Ignore storage errors in restricted contexts
-    }
-    return null;
+  // ─── Token management ─────────────────────────────────────────────────────
+
+  public getAccessToken(): string | null {
+    return this.accessToken;
   }
+
+  private setSession(token: string, apiUser: ApiUser): void {
+    this.accessToken = token;
+    this.currentUserSignal.set(mapApiUser(apiUser));
+  }
+
+  /** Clears in-memory session. Called on logout or failed refresh. */
+  public clearSession(): void {
+    this.accessToken = null;
+    this.currentUserSignal.set(null);
+    this.router.navigate(['/login']);
+  }
+
+  // ─── Refresh token (uses HttpOnly cookie automatically) ───────────────────
+
+  /**
+   * Attempts to restore a session using the HttpOnly refresh cookie.
+   * Returns the new access token on success, throws on failure.
+   */
+  public refreshToken(): Observable<string> {
+    return this.http
+      .post<AuthResponse>(
+        `${this.apiUrl}/auth/refresh`,
+        {},
+        { withCredentials: true }
+      )
+      .pipe(
+        tap((res) => {
+          const token = res.data.accessToken ?? res.data.token ?? '';
+          this.setSession(token, res.data.user);
+        }),
+        map((res) => res.data.accessToken ?? res.data.token ?? ''),
+        catchError((err: unknown) => {
+          // Refresh failed — session is gone
+          this.accessToken = null;
+          this.currentUserSignal.set(null);
+          return throwError(() => err);
+        })
+      );
+  }
+
+  /**
+   * Attempts to restore a session on app load (browser reload).
+   * Silently succeeds or fails without redirecting.
+   */
+  public tryRestoreSession(): Observable<boolean> {
+    return this.refreshToken().pipe(
+      map(() => true),
+      catchError(() => of(false))
+    );
+  }
+
+  // ─── Login ────────────────────────────────────────────────────────────────
 
   public login(
     email: string,
-    password: string,
-    rememberMe = false
-  ): { success: boolean; message?: string } {
-    const trimmedEmail = email.trim().toLowerCase();
-
-    // Check if matching any mock user
-    let user = MOCK_USERS.find((u) => u.email.toLowerCase() === trimmedEmail);
-
-    // If email is not in mock users but looks valid, assign role based on prefix or admin domain
-    if (!user) {
-      if (trimmedEmail.includes('admin')) {
-        user = {
-          id: `usr-${Date.now()}`,
-          fullName: 'Demo Administrator',
-          email: trimmedEmail,
-          role: 'ADMIN',
-          status: 'ACTIVE',
-          createdAt: new Date().toISOString(),
-          avatarInitials: 'DA',
-        };
-      } else {
-        user = {
-          id: `usr-${Date.now()}`,
-          fullName: 'Demo Viewer',
-          email: trimmedEmail,
-          role: 'VIEWER',
-          status: 'ACTIVE',
-          createdAt: new Date().toISOString(),
-          avatarInitials: 'DV',
-        };
-      }
-    }
-
-    if (user.status === 'INACTIVE') {
-      this.auditLogService.logActivity({
-        userEmail: trimmedEmail,
-        userName: user.fullName,
-        action: 'LOGIN_FAILED',
-        result: 'FAILED',
-        details: 'Login rejected: account is deactivated',
-      });
-      return { success: false, message: 'Account is deactivated. Please contact an administrator.' };
-    }
-
-    // Minimum password check for mock demo (e.g. at least 4 characters)
-    if (!password || password.length < 4) {
-      this.auditLogService.logActivity({
-        userEmail: trimmedEmail,
-        userName: user?.fullName || 'Unknown',
-        action: 'LOGIN_FAILED',
-        result: 'FAILED',
-        details: 'Password validation failed (too short)',
-      });
-      return { success: false, message: 'Invalid credentials. Password must be at least 4 characters.' };
-    }
-
-    this.setCurrentUser(user);
-
-    this.auditLogService.logActivity({
-      userEmail: user.email,
-      userName: user.fullName,
-      action: 'LOGIN_SUCCESS',
-      result: 'SUCCESS',
-      details: `User signed in successfully as ${user.role}`,
-    });
-
-    return { success: true };
+    password: string
+  ): Observable<User> {
+    return this.http
+      .post<AuthResponse>(
+        `${this.apiUrl}/auth/login`,
+        { email, password },
+        { withCredentials: true }
+      )
+      .pipe(
+        tap((res) => {
+          const token = res.data.accessToken ?? res.data.token ?? '';
+          this.setSession(token, res.data.user);
+        }),
+        map((res) => mapApiUser(res.data.user)),
+        catchError((err: HttpErrorResponse) => throwError(() => err))
+      );
   }
 
+  // ─── Logout ───────────────────────────────────────────────────────────────
+
   public logout(): void {
-    const previousUser = this.currentUserSignal();
-    this.currentUserSignal.set(null);
-    try {
-      localStorage.removeItem(DEMO_SESSION_KEY);
-    } catch {
-      // Ignore
-    }
-
-    if (previousUser) {
-      this.auditLogService.logActivity({
-        userEmail: previousUser.email,
-        userName: previousUser.fullName,
-        action: 'LOGIN_SUCCESS',
-        result: 'SUCCESS',
-        details: 'User signed out',
+    this.http
+      .post<{ status: string }>(
+        `${this.apiUrl}/auth/logout`,
+        {},
+        { withCredentials: true }
+      )
+      .subscribe({
+        complete: () => this._finishLogout(),
+        error: () => this._finishLogout(),
       });
-    }
+  }
 
+  private _finishLogout(): void {
+    this.accessToken = null;
+    this.currentUserSignal.set(null);
     this.toastService.info('Signed out successfully');
     this.router.navigate(['/login']);
   }
 
-  private setCurrentUser(user: User): void {
-    this.currentUserSignal.set(user);
-    try {
-      localStorage.setItem(DEMO_SESSION_KEY, JSON.stringify(user));
-    } catch {
-      // Ignore
-    }
+  // ─── Logout all sessions ──────────────────────────────────────────────────
+
+  public logoutAll(): Observable<void> {
+    return this.http
+      .post<{ status: string }>(
+        `${this.apiUrl}/auth/logout-all`,
+        {},
+        { withCredentials: true }
+      )
+      .pipe(
+        tap(() => {
+          this.accessToken = null;
+          this.currentUserSignal.set(null);
+        }),
+        map(() => void 0),
+        catchError((err: unknown) => throwError(() => err))
+      );
+  }
+
+  // ─── Change password ──────────────────────────────────────────────────────
+
+  public changePassword(
+    currentPassword: string,
+    newPassword: string
+  ): Observable<void> {
+    return this.http
+      .patch<{ status: string }>(
+        `${this.apiUrl}/auth/change-password`,
+        { currentPassword, newPassword },
+        { withCredentials: true }
+      )
+      .pipe(
+        tap(() => {
+          // Backend revokes all sessions on password change
+          this.accessToken = null;
+          this.currentUserSignal.set(null);
+        }),
+        map(() => void 0),
+        catchError((err: unknown) => throwError(() => err))
+      );
+  }
+
+  // ─── Current user profile ─────────────────────────────────────────────────
+
+  public getMe(): Observable<User> {
+    return this.http
+      .get<{ status: string; data: { user: ApiUser } }>(
+        `${this.apiUrl}/auth/me`,
+        { withCredentials: true }
+      )
+      .pipe(
+        tap((res) => {
+          this.currentUserSignal.set(mapApiUser(res.data.user));
+        }),
+        map((res) => mapApiUser(res.data.user)),
+        catchError((err: unknown) => throwError(() => err))
+      );
   }
 }

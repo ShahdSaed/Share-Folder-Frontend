@@ -6,6 +6,7 @@ export const MOCK_FILES: FileItem[] = [
     name: 'Company Policy.pdf',
     originalName: 'Internal_Company_Policy_v4.2.pdf',
     type: 'PDF',
+    mimeType: 'application/pdf',
     size: 2457600, // 2.34 MB
     uploadedBy: 'Alex Morris',
     uploadedById: 'usr-001',
@@ -32,6 +33,7 @@ export const MOCK_FILES: FileItem[] = [
     name: 'Employee Handbook.pdf',
     originalName: 'Global_Employee_Handbook_2026.pdf',
     type: 'PDF',
+    mimeType: 'application/pdf',
     size: 4325376, // 4.12 MB
     uploadedBy: 'Marcus Vance',
     uploadedById: 'usr-003',
@@ -56,6 +58,7 @@ export const MOCK_FILES: FileItem[] = [
     name: 'Project Plan.docx',
     originalName: 'Cloud_Migration_Project_Plan_Phase2.docx',
     type: 'DOCX',
+    mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     size: 1887436, // 1.80 MB
     uploadedBy: 'Sarah Chen',
     uploadedById: 'usr-002',
@@ -81,6 +84,7 @@ export const MOCK_FILES: FileItem[] = [
     name: 'Brand Guidelines.pdf',
     originalName: 'Brand_Identity_Styleguide_v3.pdf',
     type: 'PDF',
+    mimeType: 'application/pdf',
     size: 8912896, // 8.50 MB
     uploadedBy: 'Elena Rostova',
     uploadedById: 'usr-004',
@@ -105,6 +109,7 @@ export const MOCK_FILES: FileItem[] = [
     name: 'Quarterly Report.xlsx',
     originalName: 'Q3_Financial_Performance_Audited.xlsx',
     type: 'XLSX',
+    mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     size: 3355443, // 3.20 MB
     uploadedBy: 'Alex Morris',
     uploadedById: 'usr-001',
@@ -128,6 +133,7 @@ export const MOCK_FILES: FileItem[] = [
     name: 'Security Compliance Standard.pdf',
     originalName: 'SOC2_Type_II_Compliance_Manual.pdf',
     type: 'PDF',
+    mimeType: 'application/pdf',
     size: 1258291, // 1.20 MB
     uploadedBy: 'Alex Morris',
     uploadedById: 'usr-001',
@@ -149,6 +155,7 @@ export const MOCK_FILES: FileItem[] = [
     name: 'Client Presentation Deck.pptx',
     originalName: 'Enterprise_Capabilities_Q4_Deck.pptx',
     type: 'PPTX',
+    mimeType: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
     size: 7025459, // 6.70 MB
     uploadedBy: 'Marcus Vance',
     uploadedById: 'usr-003',
@@ -170,6 +177,7 @@ export const MOCK_FILES: FileItem[] = [
     name: 'Vendor Master Agreement.pdf',
     originalName: 'Master_Services_Agreement_Template.pdf',
     type: 'PDF',
+    mimeType: 'application/pdf',
     size: 552960, // 540 KB
     uploadedBy: 'Sarah Chen',
     uploadedById: 'usr-002',

@@ -1,25 +1,95 @@
 import { Injectable, inject, signal } from '@angular/core';
-import { FileItem, FileType } from '../models/file-item.model';
-import { MOCK_FILES } from '../mock-data/files.mock';
-import { AuditLogService } from './audit-log.service';
-import { AuthService } from './auth.service';
+import { HttpClient, HttpParams, HttpHeaders } from '@angular/common/http';
+import { Observable, throwError } from 'rxjs';
+import { tap, map, catchError } from 'rxjs/operators';
+import { FileItem, ApiFile, mapApiFile } from '../models/file-item.model';
+import { ApiPagination } from '../models/audit-log.model';
+import { environment } from '../../../environments/environment';
 
-const MASTER_DEMO_PASSWORD = 'company123';
+interface FileListResponse {
+  status: string;
+  data: {
+    files: ApiFile[];
+    pagination: ApiPagination;
+  };
+}
+
+interface FileResponse {
+  status: string;
+  data: { file: ApiFile };
+}
+
+interface VerifyPasswordResponse {
+  status: string;
+  message: string;
+  data: {
+    unlockToken: string;
+    expiresInSeconds: number;
+  };
+}
+
+interface GrantsResponse {
+  status: string;
+  data: { grants: FileGrant[] };
+}
+
+export interface FileGrant {
+  id: string;
+  fileId: string;
+  userId: string;
+  expiresAt: string | null;
+  createdAt: string;
+  user?: {
+    id: string;
+    name: string;
+    email: string;
+    role: string;
+  };
+}
 
 @Injectable({
   providedIn: 'root',
 })
 export class FileService {
-  private readonly auditLogService = inject(AuditLogService);
-  private readonly authService = inject(AuthService);
+  private readonly http = inject(HttpClient);
+  private readonly apiUrl = environment.apiUrl;
 
-  private readonly filesSignal = signal<FileItem[]>([...MOCK_FILES]);
+  // In-memory signal for the current page of files
+  private readonly filesSignal = signal<FileItem[]>([]);
   public readonly files = this.filesSignal.asReadonly();
 
-  // Track files unlocked in this demo session
+  // In-memory unlock tokens keyed by fileId
+  private readonly unlockTokens = new Map<string, string>();
+
+  // Track which file IDs are unlocked (token exists in memory)
   private readonly unlockedFileIdsSignal = signal<Set<string>>(new Set());
   public readonly unlockedFileIds = this.unlockedFileIdsSignal.asReadonly();
 
+  // ─── File listing ─────────────────────────────────────────────────────────
+
+  public loadFiles(params?: { page?: number; limit?: number; search?: string; mimeType?: string }): Observable<{ files: FileItem[]; pagination: ApiPagination }> {
+    let httpParams = new HttpParams();
+    if (params?.page) httpParams = httpParams.set('page', params.page);
+    if (params?.limit) httpParams = httpParams.set('limit', params.limit);
+    if (params?.search) httpParams = httpParams.set('search', params.search);
+    if (params?.mimeType) httpParams = httpParams.set('mimeType', params.mimeType);
+
+    return this.http
+      .get<FileListResponse>(`${this.apiUrl}/files`, { params: httpParams, withCredentials: true })
+      .pipe(
+        tap((res) => {
+          const mapped = res.data.files.map(mapApiFile);
+          this.filesSignal.set(mapped);
+        }),
+        map((res) => ({
+          files: res.data.files.map(mapApiFile),
+          pagination: res.data.pagination,
+        })),
+        catchError((err) => throwError(() => err))
+      );
+  }
+
+  /** Returns current in-memory file list (from last loadFiles call) */
   public getFiles(): FileItem[] {
     return this.filesSignal();
   }
@@ -28,179 +98,173 @@ export class FileService {
     return this.filesSignal().find((f) => f.id === id);
   }
 
+  // ─── Single file metadata ─────────────────────────────────────────────────
+
+  public fetchFileById(id: string): Observable<FileItem> {
+    return this.http
+      .get<FileResponse>(`${this.apiUrl}/files/${id}`, { withCredentials: true })
+      .pipe(
+        map((res) => mapApiFile(res.data.file)),
+        catchError((err) => throwError(() => err))
+      );
+  }
+
+  // ─── Unlock token management ──────────────────────────────────────────────
+
   public isFileUnlocked(id: string): boolean {
-    return this.unlockedFileIdsSignal().has(id);
+    return this.unlockTokens.has(id);
   }
 
-  public unlockFileDirectly(id: string): void {
-    this.unlockedFileIdsSignal.update((set) => {
-      const next = new Set(set);
-      next.add(id);
-      return next;
-    });
+  public getUnlockToken(id: string): string | null {
+    return this.unlockTokens.get(id) ?? null;
   }
 
-  public verifyPassword(
-    id: string,
-    password: string
-  ): { success: boolean; message?: string } {
-    const file = this.getFileById(id);
-    if (!file) {
-      return { success: false, message: 'File not found.' };
+  // ─── Password verification ────────────────────────────────────────────────
+
+  public verifyPassword(id: string, password: string): Observable<{ unlockToken: string; expiresInSeconds: number }> {
+    return this.http
+      .post<VerifyPasswordResponse>(
+        `${this.apiUrl}/files/${id}/verify-password`,
+        { password },
+        { withCredentials: true }
+      )
+      .pipe(
+        tap((res) => {
+          // Store the unlock token in memory only
+          this.unlockTokens.set(id, res.data.unlockToken);
+          this.unlockedFileIdsSignal.update((set) => {
+            const next = new Set(set);
+            next.add(id);
+            return next;
+          });
+        }),
+        map((res) => res.data),
+        catchError((err) => throwError(() => err))
+      );
+  }
+
+  // ─── File content (streaming) ─────────────────────────────────────────────
+
+  public getFileContentUrl(id: string): string {
+    return `${this.apiUrl}/files/${id}/content?inline=true`;
+  }
+
+  public downloadFileContent(id: string): Observable<Blob> {
+    const unlockToken = this.getUnlockToken(id);
+    let headers = new HttpHeaders();
+    if (unlockToken) {
+      headers = headers.set('X-File-Unlock-Token', unlockToken);
     }
-
-    const currentUser = this.authService.currentUser();
-    const userEmail = currentUser?.email || 'viewer@company.com';
-    const userName = currentUser?.fullName || 'Viewer User';
-
-    // Record access attempt
-    this.auditLogService.logActivity({
-      userEmail,
-      userName,
-      action: 'FILE_ACCESS_ATTEMPT',
-      targetFile: file.name,
-      result: 'SUCCESS',
-      details: 'Password verification challenge submitted',
-    });
-
-    const isMatch =
-      password === file.mockPassword ||
-      password === MASTER_DEMO_PASSWORD;
-
-    if (isMatch) {
-      this.unlockFileDirectly(id);
-
-      this.auditLogService.logActivity({
-        userEmail,
-        userName,
-        action: 'FILE_VIEWED',
-        targetFile: file.name,
-        result: 'SUCCESS',
-        details: 'Password verified successfully. Document unlocked for viewing.',
-      });
-
-      return { success: true };
-    } else {
-      this.auditLogService.logActivity({
-        userEmail,
-        userName,
-        action: 'FILE_PASSWORD_FAILED',
-        targetFile: file.name,
-        result: 'FAILED',
-        details: 'Incorrect password attempt entered in protection modal.',
-      });
-
-      return {
-        success: false,
-        message: 'Incorrect password. Please verify the password and try again.',
-      };
-    }
+    return this.http
+      .get(`${this.apiUrl}/files/${id}/content`, {
+        headers,
+        responseType: 'blob',
+        withCredentials: true,
+        params: { inline: 'true' },
+      })
+      .pipe(catchError((err) => throwError(() => err)));
   }
 
-  public uploadFile(payload: {
-    name: string;
-    type: FileType;
-    size: number;
-    password: string;
-    description?: string;
-  }): FileItem {
-    const currentUser = this.authService.currentUser();
-    const userEmail = currentUser?.email || 'alex.morris@company.com';
-    const userName = currentUser?.fullName || 'Alex Morris';
-    const userId = currentUser?.id || 'usr-001';
+  // ─── Upload ───────────────────────────────────────────────────────────────
 
-    const newFile: FileItem = {
-      id: `file-${Date.now()}`,
-      name: payload.name,
-      originalName: payload.name,
-      type: payload.type,
-      size: payload.size,
-      uploadedBy: userName,
-      uploadedById: userId,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      mockPassword: payload.password || MASTER_DEMO_PASSWORD,
-      description: payload.description || 'Uploaded enterprise document.',
-      pageCount: Math.floor(Math.random() * 15) + 3,
-      isProtected: true,
-      sampleContent: [
-        `${payload.name.toUpperCase()} • COMPANY CONFIDENTIAL`,
-        'DOCUMENT PREVIEW DEMO',
-        'This file was uploaded during the current demo session.',
-        payload.description || 'Document contents are encrypted and managed by Company File Hub controls.',
-        'Access to this document is logged in the centralized activity logs.',
-      ],
-    };
+  public uploadFile(file: File, password: string, name?: string): Observable<FileItem> {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('password', password);
+    if (name) formData.append('name', name);
 
-    this.filesSignal.update((current) => [newFile, ...current]);
-
-    this.auditLogService.logActivity({
-      userEmail,
-      userName,
-      action: 'FILE_UPLOAD',
-      targetFile: newFile.name,
-      result: 'SUCCESS',
-      details: `New ${newFile.type} uploaded (${(newFile.size / 1024 / 1024).toFixed(2)} MB)`,
-    });
-
-    return newFile;
+    return this.http
+      .post<FileResponse>(`${this.apiUrl}/files`, formData, { withCredentials: true })
+      .pipe(
+        tap((res) => {
+          const newFile = mapApiFile(res.data.file);
+          this.filesSignal.update((current) => [newFile, ...current]);
+        }),
+        map((res) => mapApiFile(res.data.file)),
+        catchError((err) => throwError(() => err))
+      );
   }
 
-  public updateFile(id: string, patch: Partial<FileItem>): boolean {
-    const file = this.getFileById(id);
-    if (!file) return false;
+  // ─── Update (rename) ──────────────────────────────────────────────────────
 
-    const currentUser = this.authService.currentUser();
-    const updatedFile: FileItem = {
-      ...file,
-      ...patch,
-      updatedAt: new Date().toISOString(),
-    };
-
-    this.filesSignal.update((current) =>
-      current.map((f) => (f.id === id ? updatedFile : f))
-    );
-
-    this.auditLogService.logActivity({
-      userEmail: currentUser?.email || 'admin@company.com',
-      userName: currentUser?.fullName || 'Administrator',
-      action: 'FILE_UPDATED',
-      targetFile: updatedFile.name,
-      result: 'SUCCESS',
-      details: `Metadata updated: ${Object.keys(patch).join(', ')}`,
-    });
-
-    return true;
+  public updateFile(id: string, updates: { name: string }): Observable<FileItem> {
+    return this.http
+      .patch<FileResponse>(`${this.apiUrl}/files/${id}`, updates, { withCredentials: true })
+      .pipe(
+        tap((res) => {
+          const updated = mapApiFile(res.data.file);
+          this.filesSignal.update((current) =>
+            current.map((f) => (f.id === id ? updated : f))
+          );
+        }),
+        map((res) => mapApiFile(res.data.file)),
+        catchError((err) => throwError(() => err))
+      );
   }
 
-  public changePassword(id: string, newPassword: string): boolean {
-    return this.updateFile(id, { mockPassword: newPassword });
+  // ─── Delete ───────────────────────────────────────────────────────────────
+
+  public deleteFile(id: string): Observable<void> {
+    return this.http
+      .delete<{ status: string }>(`${this.apiUrl}/files/${id}`, { withCredentials: true })
+      .pipe(
+        tap(() => {
+          this.filesSignal.update((current) => current.filter((f) => f.id !== id));
+          this.unlockTokens.delete(id);
+          this.unlockedFileIdsSignal.update((set) => {
+            const next = new Set(set);
+            next.delete(id);
+            return next;
+          });
+        }),
+        map(() => void 0),
+        catchError((err) => throwError(() => err))
+      );
   }
 
-  public deleteFile(id: string): boolean {
-    const file = this.getFileById(id);
-    if (!file) return false;
+  // ─── Change file password ─────────────────────────────────────────────────
 
-    const currentUser = this.authService.currentUser();
+  public changePassword(id: string, password: string): Observable<void> {
+    return this.http
+      .put<{ status: string }>(`${this.apiUrl}/files/${id}/password`, { password }, { withCredentials: true })
+      .pipe(
+        map(() => void 0),
+        catchError((err) => throwError(() => err))
+      );
+  }
 
-    this.filesSignal.update((current) => current.filter((f) => f.id !== id));
+  // ─── File access grants ───────────────────────────────────────────────────
 
-    // Also remove from unlocked set if present
-    this.unlockedFileIdsSignal.update((set) => {
-      const next = new Set(set);
-      next.delete(id);
-      return next;
-    });
+  public getFileGrants(fileId: string, status?: 'all' | 'active' | 'expired'): Observable<FileGrant[]> {
+    let params = new HttpParams();
+    if (status) params = params.set('status', status);
+    return this.http
+      .get<GrantsResponse>(`${this.apiUrl}/files/${fileId}/access`, { params, withCredentials: true })
+      .pipe(
+        map((res) => res.data.grants),
+        catchError((err) => throwError(() => err))
+      );
+  }
 
-    this.auditLogService.logActivity({
-      userEmail: currentUser?.email || 'admin@company.com',
-      userName: currentUser?.fullName || 'Administrator',
-      action: 'FILE_DELETED',
-      targetFile: file.name,
-      result: 'SUCCESS',
-      details: `File permanently deleted from repository by administrator`,
-    });
+  public grantAccess(fileId: string, userId: string, expiresInDays?: number): Observable<{ grant: FileGrant; created: boolean }> {
+    return this.http
+      .post<{ status: string; data: { grant: FileGrant; created: boolean } }>(
+        `${this.apiUrl}/files/${fileId}/access`,
+        { userId, expiresInDays },
+        { withCredentials: true }
+      )
+      .pipe(
+        map((res) => res.data),
+        catchError((err) => throwError(() => err))
+      );
+  }
 
-    return true;
+  public revokeAccess(fileId: string, userId: string): Observable<void> {
+    return this.http
+      .delete<{ status: string }>(`${this.apiUrl}/files/${fileId}/access/${userId}`, { withCredentials: true })
+      .pipe(
+        map(() => void 0),
+        catchError((err) => throwError(() => err))
+      );
   }
 }
